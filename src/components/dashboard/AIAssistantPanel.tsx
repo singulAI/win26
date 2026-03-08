@@ -105,7 +105,7 @@ const AIAssistantPanel = () => {
             </motion.div>
           ) : (
             <motion.div key="open" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
-              <Bot size={22} className="text-primary-foreground" />
+              <img src={winIcon} alt="Win AI" className="w-6 h-6 object-contain" />
             </motion.div>
           )}
         </AnimatePresence>
