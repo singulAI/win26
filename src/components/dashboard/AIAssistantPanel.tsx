@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  MessageSquare, X, Bot, Send, FileSearch, UserCheck, Car, AlertTriangle,
-  Truck, Receipt, Mic, Paperclip, Sparkles, ChevronRight, ScanLine
+  MessageSquare, X, Send, FileSearch, UserCheck, Car, AlertTriangle,
+  Truck, Receipt, Mic, Paperclip, ChevronRight, ScanLine
 } from "lucide-react";
+import winIcon from "@/assets/icon-win.png";
 
 const quickActions = [
   {
