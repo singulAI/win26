@@ -134,8 +134,8 @@ const AIAssistantPanel = () => {
             {/* Header */}
             <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center">
-                  <Sparkles size={16} className="text-primary-foreground" />
+                <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center bg-background/50">
+                  <img src={winIcon} alt="Win AI" className="w-7 h-7 object-contain" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Win AI</p>
