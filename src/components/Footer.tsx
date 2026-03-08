@@ -1,4 +1,5 @@
-import logo from "@/assets/logo-grupowin.png";
+import logoDark from "@/assets/logo-grupowin.png";
+import logoLight from "@/assets/logo-grupowin-light.png";
 
 const Footer = () => {
   return (
