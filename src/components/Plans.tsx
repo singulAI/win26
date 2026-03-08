@@ -60,8 +60,8 @@ const Plans = () => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   return (
-    <section id="planos" className="py-20 sm:py-28 lg:py-36 px-5 sm:px-8 lg:px-16">
-      <div className="container mx-auto max-w-5xl">
+    <section id="planos" className="py-24 sm:py-32 lg:py-40 px-5 sm:px-8 lg:px-16">
+      <div className="container mx-auto max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
