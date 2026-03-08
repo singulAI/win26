@@ -153,7 +153,7 @@ const AIAssistantPanel = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-24 right-6 z-50 w-[380px] max-h-[70vh] rounded-2xl border border-border overflow-hidden flex flex-col"
+            className="fixed bottom-24 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[380px] max-h-[70vh] rounded-2xl border border-border overflow-hidden flex flex-col"
             style={{
               background: "hsl(var(--background) / 0.95)",
               backdropFilter: "blur(24px)",

@@ -41,7 +41,7 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed top-0 right-0 z-50 h-full w-full max-w-[420px] flex flex-col"
+            className="fixed top-0 right-0 z-50 h-full w-full sm:max-w-[420px] flex flex-col"
             style={{
               background: "hsl(var(--surface-glass) / 0.7)",
               backdropFilter: "blur(40px) saturate(1.8)",
@@ -50,25 +50,25 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-8 pt-8 pb-6">
+            <div className="flex items-center justify-between px-5 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6">
               <div>
-                <h2 className="text-lg font-semibold text-foreground tracking-tight">
+                <h2 className="text-base sm:text-lg font-semibold text-foreground tracking-tight">
                   Área do Usuário
                 </h2>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                   Acesse sua conta ou solicite atendimento
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
               >
-                <X size={16} strokeWidth={1.5} />
+                <X size={15} strokeWidth={1.5} />
               </button>
             </div>
 
             {/* Tab Navigation */}
-            <div className="px-8 mb-6">
+            <div className="px-5 sm:px-8 mb-4 sm:mb-6">
               <div className="flex gap-1 p-1 rounded-xl bg-muted/60 border border-border/50">
                 {tabs.map((tab) => (
                   <button
@@ -77,13 +77,13 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
                       setActiveTab(tab.key);
                       setShowActions(false);
                     }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg text-xs font-medium transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-medium transition-all ${
                       activeTab === tab.key
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <tab.icon size={13} strokeWidth={1.5} />
+                    <tab.icon size={12} strokeWidth={1.5} className="sm:w-[13px] sm:h-[13px]" />
                     {tab.label}
                   </button>
                 ))}
@@ -91,7 +91,7 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
             </div>
 
             {/* Login Form */}
-            <div className="flex-1 overflow-y-auto px-8">
+            <div className="flex-1 overflow-y-auto px-5 sm:px-8">
               <AnimatePresence mode="wait">
                 {!showActions ? (
                   <motion.div
@@ -101,22 +101,19 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <div className="mb-6">
-                      <p className="text-sm font-medium text-foreground mb-1">
+                    <div className="mb-4 sm:mb-6">
+                      <p className="text-sm font-medium text-foreground mb-0.5 sm:mb-1">
                         Login — {tabs.find((t) => t.key === activeTab)?.label}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {activeTab === "colaborador" &&
-                          "Acesso restrito para equipe interna Grupo Win."}
-                        {activeTab === "associado" &&
-                          "Consulte seu contrato, sinistros e pagamentos."}
-                        {activeTab === "fornecedor" &&
-                          "Acompanhe ordens de serviço e repasses."}
+                      <p className="text-[11px] sm:text-xs text-muted-foreground">
+                        {activeTab === "colaborador" && "Acesso restrito para equipe interna Grupo Win."}
+                        {activeTab === "associado" && "Consulte seu contrato, sinistros e pagamentos."}
+                        {activeTab === "fornecedor" && "Acompanhe ordens de serviço e repasses."}
                       </p>
                     </div>
 
                     <form
-                      className="space-y-4"
+                      className="space-y-3 sm:space-y-4"
                       onSubmit={(e) => {
                         e.preventDefault();
                         if (activeTab === "colaborador") {
@@ -126,33 +123,29 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
                       }}
                     >
                       <div>
-                        <label className="block text-xs font-medium text-foreground mb-1.5">
+                        <label className="block text-[11px] sm:text-xs font-medium text-foreground mb-1 sm:mb-1.5">
                           {activeTab === "fornecedor" ? "CNPJ ou E-mail" : "CPF ou E-mail"}
                         </label>
                         <input
                           type="text"
-                          placeholder={
-                            activeTab === "fornecedor"
-                              ? "00.000.000/0001-00"
-                              : "000.000.000-00"
-                          }
-                          className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
+                          placeholder={activeTab === "fornecedor" ? "00.000.000/0001-00" : "000.000.000-00"}
+                          className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 sm:py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-foreground mb-1.5">
+                        <label className="block text-[11px] sm:text-xs font-medium text-foreground mb-1 sm:mb-1.5">
                           Senha
                         </label>
                         <input
                           type="password"
                           placeholder="••••••••"
-                          className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
+                          className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 sm:py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
                         />
                       </div>
 
                       <button
                         type="submit"
-                        className="w-full bg-gradient-gold text-primary-foreground py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-2 shadow-gold"
+                        className="w-full bg-gradient-gold text-primary-foreground py-2.5 sm:py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-2 shadow-gold"
                       >
                         <LogIn size={15} strokeWidth={1.5} />
                         Entrar
@@ -160,62 +153,44 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
 
                       <button
                         type="button"
-                        className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-2"
+                        className="w-full text-[11px] sm:text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 sm:py-2"
                       >
                         Esqueci minha senha
                       </button>
                     </form>
 
                     {/* Divider */}
-                    <div className="flex items-center gap-3 my-8">
+                    <div className="flex items-center gap-3 my-6 sm:my-8">
                       <div className="flex-1 h-px bg-border" />
-                      <span className="text-xs text-muted-foreground">
-                        ou solicite
-                      </span>
+                      <span className="text-[11px] sm:text-xs text-muted-foreground">ou solicite</span>
                       <div className="flex-1 h-px bg-border" />
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="space-y-3">
+                    <div className="space-y-2.5 sm:space-y-3">
                       <button
                         onClick={() => setShowActions(true)}
-                        className="w-full flex items-center gap-4 p-4 rounded-xl border border-border hover:border-gold-subtle bg-muted/30 hover:bg-muted/50 transition-all group"
+                        className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-border hover:border-gold-subtle bg-muted/30 hover:bg-muted/50 transition-all group"
                       >
-                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-gold/10 transition-colors">
-                          <Truck
-                            size={18}
-                            strokeWidth={1.5}
-                            className="text-gold"
-                          />
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-gold/10 transition-colors shrink-0">
+                          <Truck size={16} strokeWidth={1.5} className="text-gold sm:w-[18px] sm:h-[18px]" />
                         </div>
                         <div className="text-left">
-                          <p className="text-sm font-medium text-foreground">
-                            Acionar guincho
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Solicite assistência imediata 24h
-                          </p>
+                          <p className="text-sm font-medium text-foreground">Acionar guincho</p>
+                          <p className="text-[11px] sm:text-xs text-muted-foreground">Solicite assistência imediata 24h</p>
                         </div>
                       </button>
 
                       <button
                         onClick={() => setShowActions(true)}
-                        className="w-full flex items-center gap-4 p-4 rounded-xl border border-border hover:border-gold-subtle bg-muted/30 hover:bg-muted/50 transition-all group"
+                        className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-border hover:border-gold-subtle bg-muted/30 hover:bg-muted/50 transition-all group"
                       >
-                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-gold/10 transition-colors">
-                          <AlertTriangle
-                            size={18}
-                            strokeWidth={1.5}
-                            className="text-gold"
-                          />
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-gold/10 transition-colors shrink-0">
+                          <AlertTriangle size={16} strokeWidth={1.5} className="text-gold sm:w-[18px] sm:h-[18px]" />
                         </div>
                         <div className="text-left">
-                          <p className="text-sm font-medium text-foreground">
-                            Eventos danosos
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Registre sinistro ou ocorrência
-                          </p>
+                          <p className="text-sm font-medium text-foreground">Eventos danosos</p>
+                          <p className="text-[11px] sm:text-xs text-muted-foreground">Registre sinistro ou ocorrência</p>
                         </div>
                       </button>
                     </div>
@@ -230,42 +205,42 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
                   >
                     <button
                       onClick={() => setShowActions(false)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-6 flex items-center gap-1"
+                      className="text-[11px] sm:text-xs text-muted-foreground hover:text-foreground transition-colors mb-4 sm:mb-6 flex items-center gap-1"
                     >
                       ← Voltar ao login
                     </button>
 
-                    <h3 className="text-sm font-semibold text-foreground mb-2">
+                    <h3 className="text-sm font-semibold text-foreground mb-1.5 sm:mb-2">
                       Acionamento rápido
                     </h3>
-                    <p className="text-xs text-muted-foreground mb-6">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mb-4 sm:mb-6">
                       Selecione o tipo de atendimento necessário.
                     </p>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {/* Guincho */}
-                      <div className="p-5 rounded-2xl border border-border bg-muted/30">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center">
-                            <Truck size={18} strokeWidth={1.5} className="text-gold" />
+                      <div className="p-4 sm:p-5 rounded-2xl border border-border bg-muted/30">
+                        <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">
+                            <Truck size={16} strokeWidth={1.5} className="text-gold sm:w-[18px] sm:h-[18px]" />
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-foreground">Guincho 24h</p>
-                            <p className="text-xs text-muted-foreground">Pane, colisão ou atolamento</p>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">Pane, colisão ou atolamento</p>
                           </div>
                         </div>
-                        <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
+                        <form className="space-y-2.5 sm:space-y-3" onSubmit={(e) => e.preventDefault()}>
                           <input
                             type="text"
                             placeholder="Número do contrato ou CPF"
-                            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
+                            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 sm:py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
                           />
                           <input
                             type="text"
                             placeholder="Localização atual"
-                            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
+                            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 sm:py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
                           />
-                          <select className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-sm text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all appearance-none">
+                          <select className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 sm:py-3 text-sm text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all appearance-none">
                             <option value="">Tipo de ocorrência</option>
                             <option value="colisao">Colisão</option>
                             <option value="pane">Pane mecânica</option>
@@ -274,7 +249,7 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
                           </select>
                           <button
                             type="submit"
-                            className="w-full bg-gradient-gold text-primary-foreground py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-gold"
+                            className="w-full bg-gradient-gold text-primary-foreground py-2.5 sm:py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-gold"
                           >
                             Solicitar guincho
                           </button>
@@ -282,23 +257,23 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
                       </div>
 
                       {/* Evento danoso */}
-                      <div className="p-5 rounded-2xl border border-border bg-muted/30">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center">
-                            <AlertTriangle size={18} strokeWidth={1.5} className="text-gold" />
+                      <div className="p-4 sm:p-5 rounded-2xl border border-border bg-muted/30">
+                        <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">
+                            <AlertTriangle size={16} strokeWidth={1.5} className="text-gold sm:w-[18px] sm:h-[18px]" />
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-foreground">Evento danoso</p>
-                            <p className="text-xs text-muted-foreground">Registre sinistro ou furto</p>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground">Registre sinistro ou furto</p>
                           </div>
                         </div>
-                        <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
+                        <form className="space-y-2.5 sm:space-y-3" onSubmit={(e) => e.preventDefault()}>
                           <input
                             type="text"
                             placeholder="Número do contrato ou CPF"
-                            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
+                            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 sm:py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
                           />
-                          <select className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-sm text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all appearance-none">
+                          <select className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 sm:py-3 text-sm text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all appearance-none">
                             <option value="">Tipo de evento</option>
                             <option value="colisao">Colisão</option>
                             <option value="roubo">Roubo</option>
@@ -311,11 +286,11 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
                           <textarea
                             placeholder="Descreva o ocorrido brevemente"
                             rows={3}
-                            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all resize-none"
+                            className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 sm:py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all resize-none"
                           />
                           <button
                             type="submit"
-                            className="w-full bg-gradient-gold text-primary-foreground py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-gold"
+                            className="w-full bg-gradient-gold text-primary-foreground py-2.5 sm:py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-gold"
                           >
                             Registrar ocorrência
                           </button>
@@ -328,7 +303,7 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
             </div>
 
             {/* Footer */}
-            <div className="px-8 py-6 border-t border-border/50">
+            <div className="px-5 sm:px-8 py-4 sm:py-6 border-t border-border/50">
               <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
                 Central de atendimento 24h — 0800 000 0000
               </p>
