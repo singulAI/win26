@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  MessageSquare, X, Bot, Send, FileSearch, UserCheck, Car, AlertTriangle,
-  Truck, Receipt, Mic, Paperclip, Sparkles, ChevronRight, ScanLine
+  MessageSquare, X, Send, FileSearch, UserCheck, Car, AlertTriangle,
+  Truck, Receipt, Mic, Paperclip, ChevronRight, ScanLine
 } from "lucide-react";
+import winIcon from "@/assets/icon-win.png";
 
 const quickActions = [
   {
@@ -104,7 +105,7 @@ const AIAssistantPanel = () => {
             </motion.div>
           ) : (
             <motion.div key="open" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
-              <Bot size={22} className="text-primary-foreground" />
+              <img src={winIcon} alt="Win AI" className="w-6 h-6 object-contain" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -133,8 +134,8 @@ const AIAssistantPanel = () => {
             {/* Header */}
             <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center">
-                  <Sparkles size={16} className="text-primary-foreground" />
+                <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center bg-background/50">
+                  <img src={winIcon} alt="Win AI" className="w-7 h-7 object-contain" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Win AI</p>
