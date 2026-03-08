@@ -117,6 +117,9 @@ const Colaborador = () => {
           <FlowDiagram />
         </div>
 
+        {/* BI Charts */}
+        <BIChartsPanel />
+
         {/* Modules */}
         <ModulesGrid />
 
