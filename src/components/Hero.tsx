@@ -1,9 +1,15 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sun, Moon } from "lucide-react";
 import heroCar from "@/assets/hero-car.jpg";
 import logo from "@/assets/logo-grupowin.png";
 
-const Hero = () => {
+interface HeroProps {
+  isDark: boolean;
+  onToggleTheme: () => void;
+}
+
+const Hero = ({ isDark, onToggleTheme }: HeroProps) => {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background image */}
@@ -21,17 +27,26 @@ const Hero = () => {
       <nav className="absolute top-0 left-0 right-0 z-20 px-6 md:px-16 py-6 flex items-center justify-between">
         <img src={logo} alt="Grupo Win" className="h-8 md:h-10" />
         <div className="hidden md:flex items-center gap-10">
-          <a href="#planos" className="text-sm text-secondary-foreground hover:text-foreground transition-colors tracking-wide">Planos</a>
-          <a href="#coberturas" className="text-sm text-secondary-foreground hover:text-foreground transition-colors tracking-wide">Coberturas</a>
-          <a href="#diferenciais" className="text-sm text-secondary-foreground hover:text-foreground transition-colors tracking-wide">Diferenciais</a>
-          <a href="#contato" className="text-sm text-secondary-foreground hover:text-foreground transition-colors tracking-wide">Contato</a>
+          <a href="#planos" className="text-sm text-muted-foreground hover:text-foreground transition-colors tracking-wide">Planos</a>
+          <a href="#coberturas" className="text-sm text-muted-foreground hover:text-foreground transition-colors tracking-wide">Coberturas</a>
+          <a href="#diferenciais" className="text-sm text-muted-foreground hover:text-foreground transition-colors tracking-wide">Diferenciais</a>
+          <a href="#contato" className="text-sm text-muted-foreground hover:text-foreground transition-colors tracking-wide">Contato</a>
         </div>
-        <a
-          href="#contato"
-          className="bg-gradient-gold text-primary-foreground px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          Cotar agora
-        </a>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onToggleTheme}
+            className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Alternar tema"
+          >
+            {isDark ? <Sun size={16} strokeWidth={1.5} /> : <Moon size={16} strokeWidth={1.5} />}
+          </button>
+          <a
+            href="#contato"
+            className="bg-gradient-gold text-primary-foreground px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            Cotar agora
+          </a>
+        </div>
       </nav>
 
       {/* Content */}
@@ -43,7 +58,7 @@ const Hero = () => {
             transition={{ duration: 0.6 }}
             className="text-sm font-medium tracking-[0.2em] uppercase text-gold mb-6"
           >
-            Associacao de Beneficios
+            Associação de Benefícios
           </motion.p>
 
           <motion.h1
@@ -52,28 +67,28 @@ const Hero = () => {
             transition={{ duration: 0.7, delay: 0.1 }}
             className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold leading-[0.95] tracking-tight mb-8"
           >
-            Protecao que
+            Faça sua proteção
             <br />
-            <span className="text-gradient-gold">evolui</span> com
+            com a <span className="text-gradient-gold">melhor</span>
             <br />
-            o mercado.
+            avaliada.
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-lg md:text-xl text-secondary-foreground leading-relaxed mb-12 max-w-lg"
+            className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-12 max-w-lg"
           >
-            Planos de protecao veicular completos para carros, motos, eletricos
-            e pesados. Cobertura nacional com assistencia 24h.
+            Proteção veicular completa com guincho ilimitado em colisão,
+            franquia de 8% a 10% e cobertura em todo o território nacional.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.45 }}
-            className="flex items-center gap-6"
+            className="flex flex-col sm:flex-row items-start sm:items-center gap-4"
           >
             <a
               href="#planos"
@@ -84,7 +99,7 @@ const Hero = () => {
             </a>
             <a
               href="#coberturas"
-              className="text-secondary-foreground hover:text-foreground transition-colors text-base font-medium border border-border px-8 py-4 rounded-full hover:border-muted-foreground"
+              className="text-muted-foreground hover:text-foreground transition-colors text-base font-medium border border-border px-8 py-4 rounded-full hover:border-muted-foreground"
             >
               Conhecer coberturas
             </a>
@@ -95,19 +110,19 @@ const Hero = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.7 }}
-            className="flex gap-16 mt-20 pt-10 border-t border-border"
+            className="flex flex-wrap gap-12 md:gap-16 mt-20 pt-10 border-t border-border"
           >
             <div>
-              <p className="text-3xl md:text-4xl font-bold text-gradient-gold">167+</p>
-              <p className="text-sm text-muted-foreground mt-1">Planos ativos</p>
+              <p className="text-3xl md:text-4xl font-bold text-gradient-gold">8–10%</p>
+              <p className="text-sm text-muted-foreground mt-1">Franquia</p>
             </div>
             <div>
               <p className="text-3xl md:text-4xl font-bold text-foreground">24h</p>
-              <p className="text-sm text-muted-foreground mt-1">Assistencia</p>
+              <p className="text-sm text-muted-foreground mt-1">Assistência</p>
             </div>
             <div>
-              <p className="text-3xl md:text-4xl font-bold text-foreground">R$10,7bi</p>
-              <p className="text-sm text-muted-foreground mt-1">Mercado nacional</p>
+              <p className="text-3xl md:text-4xl font-bold text-foreground">Nacional</p>
+              <p className="text-sm text-muted-foreground mt-1">Cobertura</p>
             </div>
           </motion.div>
         </div>

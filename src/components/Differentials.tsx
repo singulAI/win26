@@ -5,32 +5,32 @@ import patternBg from "@/assets/pattern-bg.jpg";
 const items = [
   {
     icon: Scale,
-    title: "Marco Regulatorio",
-    description: "PLP 143/2024 aprovado por unanimidade no Senado. Seguranca juridica para sua protecao.",
+    title: "Marco Regulatório",
+    description: "PLP 143/2024 aprovado por unanimidade no Senado. Segurança jurídica para sua proteção.",
   },
   {
     icon: Clock,
-    title: "Sem Carencia",
-    description: "Ativacao imediata da protecao. Seu veiculo coberto desde o primeiro dia.",
+    title: "Sem Carência",
+    description: "Ativação imediata da proteção. Seu veículo coberto desde o primeiro dia.",
   },
   {
     icon: Smartphone,
     title: "100% Digital",
-    description: "Cotacao, contratacao e acionamento de sinistro pelo celular. Sem burocracia.",
+    description: "Cotação, contratação e acionamento de sinistro pelo celular. Sem burocracia.",
   },
   {
     icon: Users,
-    title: "Associacao, nao seguro",
-    description: "Modelo associativo com rateio justo. Voce paga pelo que realmente custa.",
+    title: "Associação, não seguro",
+    description: "Modelo associativo com rateio justo. Você paga pelo que realmente custa.",
   },
 ];
 
 const Differentials = () => {
   return (
-    <section id="diferenciais" className="relative py-32 px-6 md:px-16 overflow-hidden">
+    <section id="diferenciais" className="relative py-28 md:py-36 px-6 md:px-16 overflow-hidden">
       <div className="absolute inset-0">
-        <img src={patternBg} alt="" className="w-full h-full object-cover opacity-30" />
-        <div className="absolute inset-0 bg-background/80" />
+        <img src={patternBg} alt="" className="w-full h-full object-cover opacity-20 dark:opacity-30" />
+        <div className="absolute inset-0 bg-background/85" />
       </div>
 
       <div className="container mx-auto relative z-10">
@@ -59,12 +59,12 @@ const Differentials = () => {
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className="flex gap-5"
             >
-              <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
                 <item.icon size={22} strokeWidth={1.5} className="text-gold" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold mb-2 text-foreground">{item.title}</h3>
-                <p className="text-secondary-foreground text-sm leading-relaxed">{item.description}</p>
+                <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
               </div>
             </motion.div>
           ))}
