@@ -17,6 +17,7 @@ const tabs: { key: TabKey; label: string; icon: typeof User }[] = [
 ];
 
 const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>("associado");
   const [showActions, setShowActions] = useState(false);
 
