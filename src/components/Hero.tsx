@@ -2,7 +2,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Sun, Moon, Menu, User } from "lucide-react";
 import heroCar from "@/assets/hero-car.jpg";
-import logo from "@/assets/logo-grupowin.png";
+import logoDark from "@/assets/logo-grupowin.png";
+import logoLight from "@/assets/logo-grupowin-light.png";
 import SidebarModal from "./SidebarModal";
 
 interface HeroProps {
