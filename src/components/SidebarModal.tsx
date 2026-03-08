@@ -117,7 +117,13 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
 
                     <form
                       className="space-y-4"
-                      onSubmit={(e) => e.preventDefault()}
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (activeTab === "colaborador") {
+                          onClose();
+                          navigate("/colaborador");
+                        }
+                      }}
                     >
                       <div>
                         <label className="block text-xs font-medium text-foreground mb-1.5">
