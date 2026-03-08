@@ -8,6 +8,8 @@ import FlowDiagram from "@/components/dashboard/FlowDiagram";
 import ModulesGrid from "@/components/dashboard/ModulesGrid";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import RBACPanel from "@/components/dashboard/RBACPanel";
+import AIAssistantPanel from "@/components/dashboard/AIAssistantPanel";
+import BIChartsPanel from "@/components/dashboard/BIChartsPanel";
 
 const Colaborador = () => {
   const [isDark, setIsDark] = useState(false);
@@ -115,6 +117,9 @@ const Colaborador = () => {
           <FlowDiagram />
         </div>
 
+        {/* BI Charts */}
+        <BIChartsPanel />
+
         {/* Modules */}
         <ModulesGrid />
 
@@ -136,6 +141,9 @@ const Colaborador = () => {
           </p>
         </motion.div>
       </div>
+
+      {/* AI Assistant floating panel */}
+      <AIAssistantPanel />
     </div>
   );
 };
