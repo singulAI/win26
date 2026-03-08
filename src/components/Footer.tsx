@@ -60,6 +60,17 @@ const Footer = () => {
             Associação de Proteção Veicular
           </p>
         </div>
+
+        <div className="mt-4 sm:mt-6 text-center">
+          <a
+            href="https://rodrigo.run"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[9px] sm:text-[10px] text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors"
+          >
+            Desenvolvido por rodrigo.run
+          </a>
+        </div>
       </div>
     </footer>
   );

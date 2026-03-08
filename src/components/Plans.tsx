@@ -9,13 +9,11 @@ const plans = [
     price: "100",
     highlight: "Guincho ilimitado em colisão",
     popular: false,
-    previewFeatures: [
+    features: [
       "Roubo, furto e incêndio",
       "Guincho ilimitado para colisão",
       "Terceiros: R$ 100 mil + R$ 30 mil",
       "Proteção em todo o território nacional",
-    ],
-    expandedFeatures: [
       "Chuva de granizo e queda de árvore",
       "Alagamento",
       "Dois guinchos mensais para pane (400 km)",
@@ -33,13 +31,11 @@ const plans = [
     price: "150",
     highlight: "Carro reserva + rastreador incluso",
     popular: true,
-    previewFeatures: [
+    features: [
       "Tudo do plano Básico",
       "Carro reserva por 7 dias",
       "Rastreador incluso",
       "Guincho ilimitado para colisão",
-    ],
-    expandedFeatures: [
       "Roubo, furto e incêndio",
       "Chuva de granizo e queda de árvore",
       "Alagamento",
@@ -55,7 +51,6 @@ const plans = [
     ],
   },
 ];
-
 const Plans = () => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
