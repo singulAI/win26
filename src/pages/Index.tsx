@@ -27,6 +27,7 @@ const Index = () => {
       <Differentials />
       <Contact />
       <Footer />
+      <AIAssistantPanel />
     </main>
   );
 };

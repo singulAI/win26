@@ -33,7 +33,7 @@ const DashboardHeader = ({ isDark, onToggleTheme }: DashboardHeaderProps) => {
           >
             <ArrowLeft size={15} strokeWidth={1.5} />
           </button>
-          <img src={logo} alt="Grupo Win" className="h-6 sm:h-7" />
+          <img src={isDark ? logoDark : logoLight} alt="Grupo Win" className="h-6 sm:h-7" />
           <div className="hidden sm:block h-5 w-px bg-border" />
           <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
             <LayoutDashboard size={14} strokeWidth={1.5} />
