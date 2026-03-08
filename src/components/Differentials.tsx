@@ -27,29 +27,29 @@ const items = [
 
 const Differentials = () => {
   return (
-    <section id="diferenciais" className="relative py-28 md:py-36 px-6 md:px-16 overflow-hidden">
+    <section id="diferenciais" className="relative py-20 sm:py-28 lg:py-36 px-5 sm:px-8 lg:px-16 overflow-hidden">
       <div className="absolute inset-0">
         <img src={patternBg} alt="" className="w-full h-full object-cover opacity-20 dark:opacity-30" />
         <div className="absolute inset-0 bg-background/85" />
       </div>
 
-      <div className="container mx-auto relative z-10">
+      <div className="container mx-auto max-w-5xl relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-20"
+          className="text-center mb-14 sm:mb-20"
         >
-          <p className="text-sm font-medium tracking-[0.2em] uppercase text-gold mb-4">
+          <p className="text-xs sm:text-sm font-medium tracking-[0.2em] uppercase text-gold mb-3 sm:mb-4">
             Diferenciais
           </p>
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
             Por que <span className="text-gradient-gold">Grupo Win</span>
           </h2>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
           {items.map((item, i) => (
             <motion.div
               key={item.title}
@@ -57,13 +57,13 @@ const Differentials = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="flex gap-5"
+              className="flex gap-4 sm:gap-5"
             >
-              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                <item.icon size={22} strokeWidth={1.5} className="text-gold" />
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                <item.icon size={20} strokeWidth={1.5} className="text-gold" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold mb-2 text-foreground">{item.title}</h3>
+                <h3 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2 text-foreground">{item.title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
               </div>
             </motion.div>
