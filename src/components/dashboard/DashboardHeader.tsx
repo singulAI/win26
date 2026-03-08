@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { ArrowLeft, Sun, Moon, LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import logo from "@/assets/logo-grupowin.png";
+import logoDark from "@/assets/logo-grupowin.png";
+import logoLight from "@/assets/logo-grupowin-light.png";
 
 interface DashboardHeaderProps {
   isDark: boolean;
