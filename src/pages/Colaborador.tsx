@@ -141,6 +141,9 @@ const Colaborador = () => {
           </p>
         </motion.div>
       </div>
+
+      {/* AI Assistant floating panel */}
+      <AIAssistantPanel />
     </div>
   );
 };

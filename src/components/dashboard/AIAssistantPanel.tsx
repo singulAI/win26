@@ -50,8 +50,10 @@ const quickActions = [
   },
 ];
 
-const mockConversation = [
-  { role: "assistant" as const, content: "Olá! Sou a IA do Grupo Win. Como posso ajudar?" },
+type Message = { role: "user" | "assistant"; content: string };
+
+const mockConversation: Message[] = [
+  { role: "assistant", content: "Olá! Sou a IA do Grupo Win. Como posso ajudar?" },
 ];
 
 const AIAssistantPanel = () => {
