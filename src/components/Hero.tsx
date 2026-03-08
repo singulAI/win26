@@ -30,7 +30,7 @@ const Hero = ({ isDark, onToggleTheme }: HeroProps) => {
 
       {/* Navigation */}
       <nav className="absolute top-0 left-0 right-0 z-20 px-5 sm:px-8 lg:px-16 py-5 sm:py-6 flex items-center justify-between">
-        <img src={logo} alt="Grupo Win" className="h-7 sm:h-8 lg:h-10" />
+        <img src={isDark ? logoDark : logoLight} alt="Grupo Win" className="h-6 sm:h-7 lg:h-8" />
 
         <div className="hidden md:flex items-center gap-8 lg:gap-10">
           <a href="#planos" className="text-sm text-muted-foreground hover:text-foreground transition-colors tracking-wide">Planos</a>
