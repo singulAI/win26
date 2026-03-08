@@ -9,13 +9,11 @@ const plans = [
     price: "100",
     highlight: "Guincho ilimitado em colisão",
     popular: false,
-    previewFeatures: [
+    features: [
       "Roubo, furto e incêndio",
       "Guincho ilimitado para colisão",
       "Terceiros: R$ 100 mil + R$ 30 mil",
       "Proteção em todo o território nacional",
-    ],
-    expandedFeatures: [
       "Chuva de granizo e queda de árvore",
       "Alagamento",
       "Dois guinchos mensais para pane (400 km)",
@@ -33,13 +31,11 @@ const plans = [
     price: "150",
     highlight: "Carro reserva + rastreador incluso",
     popular: true,
-    previewFeatures: [
+    features: [
       "Tudo do plano Básico",
       "Carro reserva por 7 dias",
       "Rastreador incluso",
       "Guincho ilimitado para colisão",
-    ],
-    expandedFeatures: [
       "Roubo, furto e incêndio",
       "Chuva de granizo e queda de árvore",
       "Alagamento",
@@ -55,7 +51,6 @@ const plans = [
     ],
   },
 ];
-
 const Plans = () => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
@@ -149,18 +144,6 @@ const Plans = () => {
                   </div>
                 </div>
 
-                {/* Features preview */}
-                <div className="px-5 sm:px-8">
-                  <ul className="space-y-2 sm:space-y-3">
-                    {plan.previewFeatures.map((f) => (
-                      <li key={f} className={`flex items-start gap-2 sm:gap-3 text-xs sm:text-sm ${plan.popular ? "text-primary-foreground/90" : "text-foreground"}`}>
-                        <Check size={13} strokeWidth={2} className={`mt-0.5 flex-shrink-0 ${plan.popular ? "text-primary-foreground" : "text-gold"}`} />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
                 {/* Expandable features */}
                 <AnimatePresence>
                   {isExpanded && (
@@ -172,11 +155,10 @@ const Plans = () => {
                       className="overflow-hidden"
                     >
                       <div className="px-5 sm:px-8 pt-2.5 sm:pt-3">
-                        <div className={`h-px mb-2.5 sm:mb-3 ${plan.popular ? "bg-primary-foreground/15" : "bg-border"}`} />
                         <ul className="space-y-2 sm:space-y-3">
-                          {plan.expandedFeatures.map((f) => (
-                            <li key={f} className={`flex items-start gap-2 sm:gap-3 text-xs sm:text-sm ${plan.popular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                              <Check size={13} strokeWidth={2} className={`mt-0.5 flex-shrink-0 ${plan.popular ? "text-primary-foreground/60" : "text-gold/60"}`} />
+                          {plan.features.map((f) => (
+                            <li key={f} className={`flex items-start gap-2 sm:gap-3 text-xs sm:text-sm ${plan.popular ? "text-primary-foreground/90" : "text-foreground"}`}>
+                              <Check size={13} strokeWidth={2} className={`mt-0.5 flex-shrink-0 ${plan.popular ? "text-primary-foreground" : "text-gold"}`} />
                               {f}
                             </li>
                           ))}
