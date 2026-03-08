@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 const Contact = () => {
   return (
-    <section id="contato" className="py-20 sm:py-28 lg:py-36 px-5 sm:px-8 lg:px-16 bg-card">
+    <section id="contato" className="py-24 sm:py-32 lg:py-40 px-5 sm:px-8 lg:px-16 bg-card">
       <div className="container mx-auto max-w-2xl">
         <div className="text-center">
           <motion.div

@@ -27,7 +27,7 @@ const items = [
 
 const Differentials = () => {
   return (
-    <section id="diferenciais" className="relative py-20 sm:py-28 lg:py-36 px-5 sm:px-8 lg:px-16 overflow-hidden">
+    <section id="diferenciais" className="relative py-24 sm:py-32 lg:py-40 px-5 sm:px-8 lg:px-16 overflow-hidden">
       <div className="absolute inset-0">
         <img src={patternBg} alt="" className="w-full h-full object-cover opacity-20 dark:opacity-30" />
         <div className="absolute inset-0 bg-background/85" />

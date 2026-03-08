@@ -21,8 +21,8 @@ const Index = () => {
   return (
     <main className="bg-background text-foreground">
       <Hero isDark={isDark} onToggleTheme={() => setIsDark(!isDark)} />
-      <Coverages />
       <Plans />
+      <Coverages />
       <Differentials />
       <Contact />
       <Footer />
