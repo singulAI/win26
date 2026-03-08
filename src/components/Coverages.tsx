@@ -5,38 +5,38 @@ const coverages = [
   {
     icon: Shield,
     title: "Roubo e Furto",
-    description: "Cobertura integral contra roubo e furto qualificado com indenizacao por tabela FIPE.",
+    description: "Cobertura integral contra roubo e furto qualificado com indenização por tabela FIPE.",
   },
   {
     icon: Car,
-    title: "Colisao Total",
-    description: "Protecao contra colisao, capotamento e danos causados por terceiros ou fenomenos naturais.",
+    title: "Colisão e Danos",
+    description: "Proteção contra colisão, capotamento, alagamento, chuva de granizo e queda de árvore.",
   },
   {
     icon: Wrench,
-    title: "Vidros e Acessorios",
-    description: "Para-brisa, vidros laterais, traseiro, farois, lanternas e retrovisores cobertos.",
+    title: "Vidros e Acessórios",
+    description: "Para-brisa, vidros laterais, traseiro, faróis, lanternas e retrovisores cobertos.",
   },
   {
     icon: Phone,
-    title: "Assistencia 24h",
-    description: "Guincho, socorro mecanico, troca de pneus, pane seca e chaveiro em todo o territorio nacional.",
+    title: "Assistência 24h",
+    description: "Guincho ilimitado em colisão, socorro mecânico, troca de pneus, chaveiro e recarga de bateria.",
   },
   {
     icon: Zap,
-    title: "Veiculos Eletricos",
-    description: "Protecao de bateria, pane eletrica, guincho especializado e rede credenciada de alta tensao.",
+    title: "Veículos Elétricos",
+    description: "Proteção de bateria, pane elétrica, guincho especializado e rede credenciada de alta tensão.",
   },
   {
     icon: Truck,
     title: "Pesados e Frotas",
-    description: "Caminhoes, vans e frotas PJ com desconto progressivo de ate 30% para multiplos veiculos.",
+    description: "Caminhões, vans e frotas PJ com desconto progressivo de até 30% para múltiplos veículos.",
   },
 ];
 
 const Coverages = () => {
   return (
-    <section id="coberturas" className="py-32 px-6 md:px-16 bg-card">
+    <section id="coberturas" className="py-28 md:py-36 px-6 md:px-16 bg-card">
       <div className="container mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -49,10 +49,10 @@ const Coverages = () => {
             Coberturas
           </p>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-            Protecao <span className="text-gradient-gold">completa</span>
+            Proteção <span className="text-gradient-gold">completa</span>
           </h2>
-          <p className="text-secondary-foreground text-lg mt-6 max-w-xl mx-auto">
-            Cada plano e construido para oferecer seguranca real, sem letras miudas.
+          <p className="text-muted-foreground text-lg mt-6 max-w-xl mx-auto">
+            Cada plano é construído para oferecer segurança real, sem letras miúdas.
           </p>
         </motion.div>
 
@@ -64,13 +64,13 @@ const Coverages = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="glass-card rounded-2xl p-8 group hover:border-gold-subtle transition-colors"
+              className="glass-card-light rounded-2xl p-8 group hover:border-gold-subtle transition-colors"
             >
-              <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-6 group-hover:bg-gold/10 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-6 group-hover:bg-gold/10 transition-colors">
                 <cov.icon size={22} strokeWidth={1.5} className="text-gold" />
               </div>
               <h3 className="text-xl font-semibold mb-3 text-foreground">{cov.title}</h3>
-              <p className="text-secondary-foreground text-sm leading-relaxed">{cov.description}</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">{cov.description}</p>
             </motion.div>
           ))}
         </div>
