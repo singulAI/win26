@@ -2,24 +2,37 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, X, Send, FileSearch, UserCheck, Car, AlertTriangle,
-  Truck, Receipt, Mic, Paperclip, ChevronRight, ScanLine
+  Truck, Receipt, Mic, Paperclip, ChevronRight, ScanLine, Phone
 } from "lucide-react";
 import winIcon from "@/assets/icon-win.png";
 
 const quickActions = [
+  {
+    icon: AlertTriangle,
+    label: "Emergência",
+    desc: "Acionamento imediato 24h",
+    color: "text-red-500",
+    bg: "bg-red-500/10",
+    priority: true,
+    needsAuth: false,
+  },
+  {
+    icon: Phone,
+    label: "Guincho",
+    desc: "Solicitar guincho agora",
+    color: "text-orange-500",
+    bg: "bg-orange-500/10",
+    priority: true,
+    needsAuth: false,
+  },
   {
     icon: Receipt,
     label: "Cotação",
     desc: "Simular proteção veicular",
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
-  },
-  {
-    icon: AlertTriangle,
-    label: "Emergência",
-    desc: "Acionamento imediato",
-    color: "text-red-500",
-    bg: "bg-red-500/10",
+    priority: false,
+    needsAuth: true,
   },
   {
     icon: Car,
@@ -27,6 +40,8 @@ const quickActions = [
     desc: "Gestão de terceiros",
     color: "text-blue-500",
     bg: "bg-blue-500/10",
+    priority: false,
+    needsAuth: true,
   },
   {
     icon: Truck,
@@ -34,6 +49,8 @@ const quickActions = [
     desc: "Rede credenciada",
     color: "text-amber-500",
     bg: "bg-amber-500/10",
+    priority: false,
+    needsAuth: true,
   },
   {
     icon: ScanLine,
@@ -41,20 +58,15 @@ const quickActions = [
     desc: "Leitura de documentos",
     color: "text-violet-500",
     bg: "bg-violet-500/10",
-  },
-  {
-    icon: UserCheck,
-    label: "Associado",
-    desc: "Reconhecer por CPF/placa",
-    color: "text-cyan-500",
-    bg: "bg-cyan-500/10",
+    priority: false,
+    needsAuth: true,
   },
 ];
 
 type Message = { role: "user" | "assistant"; content: string };
 
 const mockConversation: Message[] = [
-  { role: "assistant", content: "Olá! Sou a IA do Grupo Win. Como posso ajudar?" },
+  { role: "assistant", content: "Olá! Sou a IA do Grupo Win. Em caso de emergência, clique no botão vermelho acima. Como posso ajudar?" },
 ];
 
 const AIAssistantPanel = () => {
@@ -63,16 +75,32 @@ const AIAssistantPanel = () => {
   const [messages, setMessages] = useState(mockConversation);
   const [input, setInput] = useState("");
 
-  const handleActionClick = (label: string) => {
+  const handleActionClick = (action: typeof quickActions[0]) => {
     setActiveView("chat");
-    setMessages([
-      ...mockConversation,
-      { role: "user" as const, content: `Quero ajuda com: ${label}` },
-      {
-        role: "assistant" as const,
-        content: `Entendi! Vou ajudar com **${label}**. Por favor, informe o CPF ou placa do associado para iniciarmos.`,
-      },
-    ]);
+
+    if (action.priority) {
+      // Emergency actions - no auth needed, immediate help
+      setMessages([
+        ...mockConversation,
+        { role: "user" as const, content: `Preciso de ajuda: ${action.label}` },
+        {
+          role: "assistant" as const,
+          content: action.label === "Emergência"
+            ? `🚨 **Emergência acionada!**\n\nInforme rapidamente:\n• Sua localização (ou compartilhe pelo GPS)\n• Tipo de ocorrência (colisão, roubo, pane)\n\nEstamos encaminhando atendimento imediato.`
+            : `🚗 **Guincho solicitado!**\n\nInforme sua localização atual e o destino desejado. Nosso guincho mais próximo será acionado imediatamente.\n\nTempo médio de chegada: 30-45 min.`,
+        },
+      ]);
+    } else {
+      // Benefit actions - need associado data
+      setMessages([
+        ...mockConversation,
+        { role: "user" as const, content: `Quero ajuda com: ${action.label}` },
+        {
+          role: "assistant" as const,
+          content: `Para acessar **${action.label}**, preciso identificar seu cadastro.\n\nPor favor, informe seu **CPF** ou **placa do veículo**.`,
+        },
+      ]);
+    }
   };
 
   const handleSend = () => {
@@ -87,6 +115,9 @@ const AIAssistantPanel = () => {
     ]);
     setInput("");
   };
+
+  const emergencyActions = quickActions.filter((a) => a.priority);
+  const benefitActions = quickActions.filter((a) => !a.priority);
 
   return (
     <>
@@ -109,7 +140,6 @@ const AIAssistantPanel = () => {
             </motion.div>
           )}
         </AnimatePresence>
-        {/* Pulse ring */}
         {!isOpen && (
           <span className="absolute inset-0 rounded-2xl animate-ping bg-primary/20 pointer-events-none" />
         )}
@@ -152,16 +182,40 @@ const AIAssistantPanel = () => {
             <div className="flex-1 overflow-y-auto min-h-0">
               {activeView === "menu" ? (
                 <div className="p-5 space-y-4">
-                  {/* Capabilities */}
+                  {/* Emergency actions - TOP priority */}
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-medium mb-3">
-                      Funcionalidades
+                    <p className="text-[10px] uppercase tracking-[0.15em] text-red-500 font-semibold mb-3">
+                      🚨 Emergência
                     </p>
                     <div className="grid grid-cols-2 gap-2">
-                      {quickActions.map((action) => (
+                      {emergencyActions.map((action) => (
                         <button
                           key={action.label}
-                          onClick={() => handleActionClick(action.label)}
+                          onClick={() => handleActionClick(action)}
+                          className="flex items-start gap-3 p-3 rounded-xl border border-red-500/20 hover:border-red-500/40 hover:bg-red-500/5 transition-all text-left group"
+                        >
+                          <div className={`w-8 h-8 rounded-lg ${action.bg} flex items-center justify-center shrink-0`}>
+                            <action.icon size={14} className={action.color} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-foreground">{action.label}</p>
+                            <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{action.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Benefit actions */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-medium mb-3">
+                      Benefícios do associado
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {benefitActions.map((action) => (
+                        <button
+                          key={action.label}
+                          onClick={() => handleActionClick(action)}
                           className="flex items-start gap-3 p-3 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-muted/50 transition-all text-left group"
                         >
                           <div className={`w-8 h-8 rounded-lg ${action.bg} flex items-center justify-center shrink-0`}>
@@ -198,7 +252,6 @@ const AIAssistantPanel = () => {
                 </div>
               ) : (
                 <div className="flex flex-col h-full">
-                  {/* Back button */}
                   <button
                     onClick={() => {
                       setActiveView("menu");
@@ -208,8 +261,6 @@ const AIAssistantPanel = () => {
                   >
                     ← Voltar ao menu
                   </button>
-
-                  {/* Messages */}
                   <div className="flex-1 px-5 pb-3 space-y-3 overflow-y-auto">
                     {messages.map((msg, i) => (
                       <motion.div
@@ -235,7 +286,7 @@ const AIAssistantPanel = () => {
               )}
             </div>
 
-            {/* Input bar (always visible) */}
+            {/* Input bar */}
             <div className="px-4 py-3 border-t border-border/50 shrink-0">
               <div className="flex items-center gap-2 p-1.5 rounded-xl bg-muted/50 border border-border/50">
                 <button className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors" aria-label="Anexar arquivo">

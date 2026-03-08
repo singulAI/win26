@@ -5,6 +5,7 @@ import Plans from "@/components/Plans";
 import Differentials from "@/components/Differentials";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
+import AIAssistantPanel from "@/components/dashboard/AIAssistantPanel";
 
 const Index = () => {
   const [isDark, setIsDark] = useState(false);
@@ -26,6 +27,7 @@ const Index = () => {
       <Differentials />
       <Contact />
       <Footer />
+      <AIAssistantPanel />
     </main>
   );
 };

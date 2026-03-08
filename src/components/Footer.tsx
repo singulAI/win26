@@ -1,4 +1,5 @@
-import logo from "@/assets/logo-grupowin.png";
+import logoDark from "@/assets/logo-grupowin.png";
+import logoLight from "@/assets/logo-grupowin-light.png";
 
 const Footer = () => {
   return (
@@ -6,7 +7,7 @@ const Footer = () => {
       <div className="container mx-auto max-w-6xl">
         <div className="flex flex-col lg:flex-row justify-between items-start gap-10 sm:gap-12">
           <div className="max-w-xs">
-            <img src={logo} alt="Grupo Win" className="h-7 sm:h-8 mb-4" />
+            <img src={document.documentElement.classList.contains('dark') ? logoDark : logoLight} alt="Grupo Win" className="h-6 sm:h-7 mb-4" />
             <p className="text-sm text-muted-foreground leading-relaxed">
               Associação de benefícios em proteção veicular. Regulamentada pelo marco legal PLP 143/2024.
             </p>
