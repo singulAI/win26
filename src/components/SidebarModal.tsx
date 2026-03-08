@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Truck, AlertTriangle, LogIn, Building2, Wrench } from "lucide-react";
 
@@ -16,6 +17,7 @@ const tabs: { key: TabKey; label: string; icon: typeof User }[] = [
 ];
 
 const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>("associado");
   const [showActions, setShowActions] = useState(false);
 
@@ -115,7 +117,13 @@ const SidebarModal = ({ isOpen, onClose }: SidebarModalProps) => {
 
                     <form
                       className="space-y-4"
-                      onSubmit={(e) => e.preventDefault()}
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (activeTab === "colaborador") {
+                          onClose();
+                          navigate("/colaborador");
+                        }
+                      }}
                     >
                       <div>
                         <label className="block text-xs font-medium text-foreground mb-1.5">
