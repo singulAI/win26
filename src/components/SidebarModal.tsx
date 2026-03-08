@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Truck, AlertTriangle, LogIn, Building2, Wrench } from "lucide-react";
 
