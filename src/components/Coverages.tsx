@@ -36,27 +36,27 @@ const coverages = [
 
 const Coverages = () => {
   return (
-    <section id="coberturas" className="py-24 sm:py-32 lg:py-40 px-5 sm:px-8 lg:px-16 bg-card">
+    <section id="coberturas" className="py-16 sm:py-28 lg:py-40 px-4 sm:px-8 lg:px-16 bg-card">
       <div className="container mx-auto max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-14 sm:mb-20"
+          className="text-center mb-10 sm:mb-16 lg:mb-20"
         >
-          <p className="text-xs sm:text-sm font-medium tracking-[0.2em] uppercase text-gold mb-3 sm:mb-4">
+          <p className="text-[11px] sm:text-sm font-medium tracking-[0.15em] sm:tracking-[0.2em] uppercase text-gold mb-2.5 sm:mb-4">
             Coberturas
           </p>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
             Proteção <span className="text-gradient-gold">completa</span>
           </h2>
-          <p className="text-muted-foreground text-base sm:text-lg mt-4 sm:mt-6 max-w-xl mx-auto">
+          <p className="text-muted-foreground text-sm sm:text-lg mt-3 sm:mt-6 max-w-xl mx-auto">
             Cada plano é construído para oferecer segurança real, sem letras miúdas.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 lg:gap-6">
           {coverages.map((cov, i) => (
             <motion.div
               key={cov.title}
@@ -64,13 +64,13 @@ const Coverages = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="glass-card-light rounded-2xl p-6 sm:p-8 group hover:border-gold-subtle transition-colors"
+              className="glass-card-light rounded-xl sm:rounded-2xl p-5 sm:p-7 lg:p-8 group hover:border-gold-subtle transition-colors"
             >
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-muted flex items-center justify-center mb-5 sm:mb-6 group-hover:bg-gold/10 transition-colors">
-                <cov.icon size={20} strokeWidth={1.5} className="text-gold" />
+              <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-lg sm:rounded-xl bg-muted flex items-center justify-center mb-4 sm:mb-5 lg:mb-6 group-hover:bg-gold/10 transition-colors">
+                <cov.icon size={18} strokeWidth={1.5} className="text-gold sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-foreground">{cov.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{cov.description}</p>
+              <h3 className="text-base sm:text-lg lg:text-xl font-semibold mb-1.5 sm:mb-2 lg:mb-3 text-foreground">{cov.title}</h3>
+              <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">{cov.description}</p>
             </motion.div>
           ))}
         </div>
