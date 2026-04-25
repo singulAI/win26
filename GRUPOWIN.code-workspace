@@ -1,0 +1,36 @@
+{
+  "folders": [
+    {
+      "name": "🏆 GRUPOWIN — Deploy",
+      "path": "./grupowin-deploy"
+    }
+  ],
+  "settings": {
+    "workbench.colorCustomizations": {
+      "titleBar.activeBackground": "#1a5c2a",
+      "titleBar.activeForeground": "#ffffff",
+      "activityBar.background": "#123d1c"
+    },
+    "window.title": "🏆 GRUPOWIN — ${activeEditorShort}",
+    "editor.formatOnSave": true,
+    "files.exclude": {
+      "node_modules": true,
+      ".git": false
+    },
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+      "package.json": "package-lock.json, yarn.lock, .npmrc",
+      "*.ts": "${capture}.js, ${capture}.d.ts",
+      ".env": ".env.*",
+      "docker-compose.yml": "docker-compose.*.yml, Dockerfile, .dockerignore"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "ms-vscode-remote.remote-ssh",
+      "ms-azuretools.vscode-docker"
+    ]
+  }
+}

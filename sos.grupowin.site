@@ -1,0 +1,34 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name sos.grupowin.site;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name sos.grupowin.site;
+
+    ssl_certificate /etc/letsencrypt/live/sos.grupowin.site/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/sos.grupowin.site/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    root /var/www/sos.grupowin.site;
+    index index.html;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache de assets estáticos
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+    }
+}
