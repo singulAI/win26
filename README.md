@@ -345,7 +345,33 @@ X-Siprov-Token: <SIPROV_WEBHOOK_SECRET>
 
 ---
 
-## 12. Deploy na VPS
+## 12. Estado de Deploy (atualizado 01/05/2026)
+
+### Backend em produção
+
+| Item | Valor |
+|---|---|
+| URL | `https://api.grupowin.site` |
+| Health | `GET /health` → `{"status":"ok","version":"1.0.0"}` |
+| Login | `POST /api/auth/login` |
+| PM2 | `grupowin-api` — porta `38010`, 2 workers |
+| Banco | PostgreSQL 14 porta `5433`, db `grupowin` |
+| Usuário master | `oi@grupowin.site` |
+| Branch ativo | `copilot/connect-to-vps-ssh` |
+| Diretório VPS | `/root/grupowin-api` |
+
+### Próximas tarefas
+1. Build do frontend React (Vite) e deploy em `sos.grupowin.site`
+2. Build do portal metrics e deploy em `metrics.grupowin.site`
+3. Criar usuários operacionais adicionais via `POST /api/auth/usuarios`
+4. Alterar senha padrão `Mudar@123` do master
+5. Mesclar branch `copilot/connect-to-vps-ssh` → `main`
+
+> Ver [RESTORE-POINT.md](./RESTORE-POINT.md) para comandos completos de restauração.
+
+---
+
+## 13. Deploy na VPS
 
 ### Visão geral do pacote
 
