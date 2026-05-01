@@ -5,7 +5,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth, vistorias, acionamentos, financeiro, bi, ai
+from app.routers import auth, vistorias, acionamentos, financeiro, bi, ai, conciliacoes
 
 
 @asynccontextmanager
@@ -34,13 +34,15 @@ app.add_middleware(
 # Prometheus metrics
 Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
-# Routers
-app.include_router(auth.router)
-app.include_router(vistorias.router)
-app.include_router(acionamentos.router)
-app.include_router(financeiro.router)
-app.include_router(bi.router)
-app.include_router(ai.router)
+# Routers — todos sob /api
+app.include_router(auth.router, prefix="/api")
+app.include_router(vistorias.router, prefix="/api")
+app.include_router(acionamentos.router, prefix="/api")
+app.include_router(financeiro.router, prefix="/api")
+app.include_router(bi.router, prefix="/api")
+app.include_router(ai.router, prefix="/api")
+app.include_router(conciliacoes.router, prefix="/api")
+app.include_router(conciliacoes.integrations_router, prefix="/api")
 
 
 @app.get("/health")

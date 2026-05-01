@@ -1,0 +1,32 @@
+services:
+  grupowin-postgres-dev:
+    image: postgres:16
+    container_name: grupowin-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: grupowin
+      POSTGRES_USER: grupowin
+      POSTGRES_PASSWORD: grupowin
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grupowin -d grupowin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - grupowin-postgres-dev-data:/var/lib/postgresql/data
+
+  grupowin-redis-dev:
+    image: redis:7
+    container_name: grupowin-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - grupowin-redis-dev-data:/data
+
+volumes:
+  grupowin-postgres-dev-data:
+  grupowin-redis-dev-data:

@@ -39,12 +39,11 @@ async def criar_acionamento(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Valida benefício ativo
+    # Valida benefício ativo via associado
     try:
-        if payload.cod_beneficio:
-            beneficio = await siprov.get_beneficio(payload.cod_beneficio)
-            if beneficio.get("status") == "CANCELADO":
-                raise HTTPException(400, "Benefício cancelado — acionamento não permitido")
+        associado = await siprov.get_associado(payload.cod_pessoa)
+        if associado and associado.get("situacao") in ("CANCELADO", "INATIVO"):
+            raise HTTPException(400, "Benefício cancelado/inativo — acionamento não permitido")
     except HTTPException:
         raise
     except Exception:

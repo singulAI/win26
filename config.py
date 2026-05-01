@@ -21,9 +21,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 horas
 
-    # Siprov ERP (externo)
-    SIPROV_BASE_URL: str = ""
-    SIPROV_TOKEN: str = ""
+    # Siprov ERP — https://acesso.siprov.com.br/siprov-api
+    # Auth: Basic Auth (user+password) → Bearer Token (12h)
+    SIPROV_BASE_URL: str = "https://acesso.siprov.com.br/siprov-api"
+    SIPROV_USER: str = ""
+    SIPROV_PASSWORD: str = ""
     SIPROV_TIMEOUT: int = 30
 
     # Assist24 (externo)
