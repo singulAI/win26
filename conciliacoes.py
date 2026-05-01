@@ -62,6 +62,12 @@ async def upload_conciliacao(
         processing = process_reconciliation_file(arquivo.filename, content)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        print(f"Falha ao ler arquivo de conciliacao '{arquivo.filename}': {exc}")
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel ler o arquivo enviado. Verifique se a planilha esta em .xlsx ou .csv valido e contem cabecalhos.",
+        ) from exc
 
     # Passo 2: Cruzamento com base interna (TEMPORARIAMENTE DESABILITADO PARA TESTES)
     try:

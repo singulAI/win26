@@ -193,7 +193,7 @@ const Colaborador = () => {
     event.preventDefault();
 
     if (!uploadFile) {
-      setUploadError("Selecione um arquivo .xlsx para importar.");
+      setUploadError("Selecione um arquivo .xlsx ou .csv para importar.");
       return;
     }
 
@@ -458,16 +458,16 @@ const Colaborador = () => {
             </div>
 
             <div className="mt-4">
-              <label className="block text-xs font-medium text-muted-foreground mb-2">Arquivo .xlsx</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-2">Arquivo .xlsx ou .csv</label>
               <input
                 type="file"
-                accept=".xlsx"
+                accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={handleFileChange}
                 disabled={!token || isUploading}
                 className="block w-full rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-sm text-muted-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-xs file:font-medium file:text-primary-foreground disabled:opacity-60"
               />
               <p className="mt-2 text-[11px] text-muted-foreground">
-                Estrutura esperada: planilha validada pela API. O envio só é liberado para perfil master autenticado.
+                Estrutura esperada: planilha com cabecalho e coluna de placa. O envio so e liberado para perfil master autenticado.
               </p>
             </div>
 

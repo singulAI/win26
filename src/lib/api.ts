@@ -26,9 +26,23 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       const errorBody = await response.json();
       if (typeof errorBody?.detail === "string") {
         message = errorBody.detail;
+      } else if (Array.isArray(errorBody?.detail)) {
+        message = errorBody.detail
+          .map((item: { msg?: string; loc?: Array<string | number> }) => {
+            const field = Array.isArray(item?.loc) ? item.loc[item.loc.length - 1] : null;
+            return field ? `${field}: ${item?.msg ?? "valor invalido"}` : item?.msg ?? "valor invalido";
+          })
+          .join("; ");
       }
     } catch {
-      // noop
+      try {
+        const text = await response.text();
+        if (text) {
+          message = text;
+        }
+      } catch {
+        // noop
+      }
     }
 
     throw new Error(message);
