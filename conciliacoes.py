@@ -2,7 +2,7 @@ from datetime import date
 from io import StringIO
 import csv
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select, func, insert
@@ -38,8 +38,8 @@ class UploadResponse(BaseModel):
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_conciliacao(
-    fornecedor: IntegrationFornecedor,
-    periodo_ref: date,
+    fornecedor: IntegrationFornecedor = Form(...),
+    periodo_ref: date = Form(...),
     arquivo: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.master)),
