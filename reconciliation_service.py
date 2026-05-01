@@ -5,6 +5,7 @@ from io import BytesIO, StringIO
 import csv
 import re
 from typing import Any
+import unicodedata
 
 from openpyxl import load_workbook
 
@@ -26,6 +27,15 @@ PLATE_COLUMNS = {
     "placa_veiculo",
     "placa veículo",
     "placa veiculo",
+    "placa do veiculo",
+    "placa do veículo",
+    "placa associado",
+    "placa do associado",
+    "placa beneficiario",
+    "placa do beneficiario",
+    "placa do carro",
+    "placa automovel",
+    "placa do automovel",
     "vehicle_plate",
     "plate",
     "veiculo_placa",
@@ -41,10 +51,13 @@ def _normalize_plate(value: str | None) -> str | None:
 
 
 def _normalize_key(value: str | None) -> str:
-    """Normaliza chave de header: minúsculas, espaço único, sem trim extremos."""
+    """Normaliza chave de header: sem acentos, sem pontuação e com espaço único."""
     if not value:
         return ""
-    return re.sub(r"\s+", " ", str(value).strip().lower())
+    normalized = unicodedata.normalize("NFKD", str(value).strip().lower())
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    normalized = re.sub(r"[^a-z0-9]+", " ", normalized)
+    return re.sub(r"\s+", " ", normalized).strip()
 
 
 def _extract_rows_from_xlsx(content: bytes) -> list[dict[str, Any]]:
@@ -100,9 +113,20 @@ def _extract_rows(filename: str, content: bytes) -> list[dict[str, Any]]:
 
 def _find_plate_column(headers: set[str]) -> str | None:
     """Encontra nome da coluna de placa nos headers normalizados."""
+    normalized_candidates = {_normalize_key(candidate) for candidate in PLATE_COLUMNS}
+
     for key in headers:
-        if key in PLATE_COLUMNS:
+        if key in normalized_candidates:
             return key
+
+    for key in headers:
+        if "placa" in key.split():
+            return key
+
+    for key in headers:
+        if "placa" in key:
+            return key
+
     return None
 
 
@@ -116,8 +140,9 @@ def _validate_file_structure(rows: list[dict[str, Any]]) -> None:
     
     if not plate_col:
         plate_options = ", ".join(PLATE_COLUMNS)
+        found_headers = ", ".join(str(key) for key in rows[0].keys())
         raise ValueError(
-            f"Nenhuma coluna de placa encontrada. Esperado um de: {plate_options}"
+            f"Nenhuma coluna de placa encontrada. Esperado um de: {plate_options}. Cabecalhos encontrados: {found_headers}"
         )
 
 
