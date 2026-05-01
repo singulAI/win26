@@ -9,11 +9,12 @@ type RequestOptions = RequestInit & {
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { token, headers, ...rest } = options;
+  const isFormData = typeof FormData !== "undefined" && rest.body instanceof FormData;
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...rest,
     headers: {
-      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...headers,
     },
   });
@@ -84,4 +85,13 @@ export interface ReconciliationDivergence {
   dados_fornecedor: Record<string, unknown> | null;
   dados_interno: Record<string, unknown> | null;
   criado_em: string | null;
+}
+
+export interface ReconciliationUploadResponse {
+  report_id: number;
+  fornecedor: string;
+  periodo_ref: string;
+  total_registros: number;
+  total_matches: number;
+  total_divergencias: number;
 }

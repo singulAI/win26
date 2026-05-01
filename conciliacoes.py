@@ -188,12 +188,21 @@ async def resumo_agregado_conciliacoes(
         }
     
     # Contagem de placas duplicadas
-    duplicadas_result = await db.execute(
-        select(func.count(IntegrationMatch.id)).where(
-            IntegrationMatch.dados_interno["motivo_preprocessamento"].astext == "placa_duplicada_no_arquivo"
+    try:
+        duplicadas_result = await db.execute(
+            select(func.count(IntegrationMatch.id)).where(
+                IntegrationMatch.dados_interno["motivo_preprocessamento"].as_string() == "placa_duplicada_no_arquivo"
+            )
         )
-    )
-    duplicadas_count = duplicadas_result.scalar() or 0
+        duplicadas_count = duplicadas_result.scalar() or 0
+    except Exception:
+        fallback_result = await db.execute(select(IntegrationMatch.dados_interno))
+        duplicadas_count = sum(
+            1
+            for dados_interno in fallback_result.scalars()
+            if isinstance(dados_interno, dict)
+            and dados_interno.get("motivo_preprocessamento") == "placa_duplicada_no_arquivo"
+        )
     
     return {
         "por_fornecedor": fornecedor_stats,
