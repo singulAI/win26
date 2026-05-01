@@ -12,6 +12,9 @@ from openpyxl import load_workbook
 from app.models.integration import IntegrationMatchStatus
 
 
+SOURCE_ROW_KEY = "__source_row__"
+
+
 @dataclass
 class ProcessResult:
     """Resultado do processamento de arquivo: estatísticas + lista de matches."""
@@ -60,22 +63,67 @@ def _normalize_key(value: str | None) -> str:
     return re.sub(r"\s+", " ", normalized).strip()
 
 
+def _extract_header_candidates(row: tuple[Any, ...] | None) -> list[str]:
+    if not row:
+        return []
+    return [str(cell).strip() for cell in row if cell not in (None, "") and str(cell).strip()]
+
+
+def _detect_header_row(raw_rows: list[tuple[Any, ...]]) -> int | None:
+    """Detecta a linha de cabeçalho real nas primeiras linhas da planilha."""
+    best_index: int | None = None
+    best_score = -1
+    header_keywords = {
+        "nome",
+        "cpf cnpj",
+        "beneficio",
+        "chassi",
+        "situacao origem",
+        "plano origem",
+        "situacao destino",
+        "produto destino",
+    }
+
+    for index, row in enumerate(raw_rows[:15]):
+        candidates = _extract_header_candidates(row)
+        if not candidates:
+            continue
+
+        normalized = {_normalize_key(cell) for cell in candidates}
+        score = len(candidates)
+
+        if _find_plate_column(normalized):
+            score += 100
+
+        score += sum(1 for item in normalized if item in header_keywords)
+
+        if score > best_score:
+            best_score = score
+            best_index = index
+
+    return best_index
+
+
 def _extract_rows_from_xlsx(content: bytes) -> list[dict[str, Any]]:
     """Extrai linhas de arquivo XLSX usando openpyxl. Pula línhas vazias."""
     wb = load_workbook(BytesIO(content), data_only=True)
     ws = wb.active
 
-    rows_iter = ws.iter_rows(values_only=True)
-    headers = next(rows_iter, None)
-    if not headers:
+    raw_rows = list(ws.iter_rows(values_only=True))
+    if not raw_rows:
         raise ValueError("Arquivo XLSX está vazio ou sem headers")
 
+    header_row_index = _detect_header_row(raw_rows)
+    if header_row_index is None:
+        raise ValueError("Nenhum cabeçalho detectado no XLSX")
+
+    headers = raw_rows[header_row_index]
     normalized_headers = [str(h).strip() if h is not None else "" for h in headers]
     if not any(normalized_headers):
         raise ValueError("Nenhum cabeçalho detectado no XLSX")
 
     rows: list[dict[str, Any]] = []
-    for row in rows_iter:
+    for sheet_row_index, row in enumerate(raw_rows[header_row_index + 1 :], start=header_row_index + 2):
         if row is None:
             continue
         payload = {
@@ -85,6 +133,7 @@ def _extract_rows_from_xlsx(content: bytes) -> list[dict[str, Any]]:
         }
         # Ignora linha completamente vazia
         if any(v not in (None, "") for v in payload.values()):
+            payload[SOURCE_ROW_KEY] = sheet_row_index
             rows.append(payload)
     
     return rows
@@ -135,12 +184,12 @@ def _validate_file_structure(rows: list[dict[str, Any]]) -> None:
     if not rows:
         raise ValueError("Arquivo sem dados (ou apenas headers)")
     
-    first_row_keys = {_normalize_key(k) for k in rows[0].keys()}
+    first_row_keys = {_normalize_key(k) for k in rows[0].keys() if k != SOURCE_ROW_KEY}
     plate_col = _find_plate_column(first_row_keys)
     
     if not plate_col:
         plate_options = ", ".join(PLATE_COLUMNS)
-        found_headers = ", ".join(str(key) for key in rows[0].keys())
+        found_headers = ", ".join(str(key) for key in rows[0].keys() if key != SOURCE_ROW_KEY)
         raise ValueError(
             f"Nenhuma coluna de placa encontrada. Esperado um de: {plate_options}. Cabecalhos encontrados: {found_headers}"
         )
@@ -165,9 +214,8 @@ def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
         return ProcessResult(0, 0, 0, [])
 
     # Encontra coluna placa (normalizada)
-    first_row_normalized = {_normalize_key(k): k for k in rows[0].keys()}
+    first_row_normalized = {_normalize_key(k): k for k in rows[0].keys() if k != SOURCE_ROW_KEY}
     plate_col_normalized = _find_plate_column(set(first_row_normalized.keys()))
-    plate_col_original = first_row_normalized.get(plate_col_normalized, "placa") if plate_col_normalized else "placa"
 
     seen_plates: dict[str | None, int] = {}  # plate → count para detectar duplicatas
     matches: list[dict[str, Any]] = []
@@ -176,7 +224,7 @@ def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
         # Encontra valor da placa na row
         plate_raw = None
         for key in row.keys():
-            if _normalize_key(key) == plate_col_normalized:
+            if key != SOURCE_ROW_KEY and _normalize_key(key) == plate_col_normalized:
                 plate_raw = row[key]
                 break
         
@@ -188,10 +236,12 @@ def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
         else:
             seen_plates[None] = seen_plates.get(None, 0) + 1
         
+        row_data = {key: value for key, value in row.items() if key != SOURCE_ROW_KEY}
+
         # Status será determinado no cruzamento, inicialmente assume-se nao_encontrado
         status = IntegrationMatchStatus.nao_encontrado
         internal_data = {
-            "linha": idx + 2,  # +2 = +1 para header, +1 para 1-indexed
+            "linha": row.get(SOURCE_ROW_KEY, idx + 2),
             "motivo_preprocessamento": None,
         }
         
@@ -204,7 +254,7 @@ def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
             "placa_normalizada": plate,
             "case_id": None,
             "status_match": status,  # Preliminar; será revisado no crosscheck
-            "dados_fornecedor": row,
+            "dados_fornecedor": row_data,
             "dados_interno": internal_data,
         })
     
