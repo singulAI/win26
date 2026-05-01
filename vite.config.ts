@@ -5,6 +5,13 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  root: path.resolve(__dirname, "."),
+  build: {
+    outDir: "dist-metrics",
+    rollupOptions: {
+      input: path.resolve(__dirname, "src/main.tsx"),
+    },
+  },
   server: {
     host: "::",
     port: 8080,
