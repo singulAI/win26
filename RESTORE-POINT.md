@@ -47,6 +47,15 @@
 | Proxy | `http://127.0.0.1:38010` |
 | SSL | `/etc/letsencrypt/live/api.grupowin.site/` (Let's Encrypt) |
 
+### Portal metrics (Nginx estático)
+| Recurso | Valor |
+|---|---|
+| Vhost | `/etc/nginx/sites-available/metrics.grupowin.site` |
+| Root real servido | `/var/www/metrics.grupowin.site` |
+| Auth básico | Ativo via `auth_basic` e `/etc/nginx/.htpasswd-metrics` |
+| Comportamento público | `401 Authorization Required` sem credenciais |
+| Política desejada | Manter protegido, sem exposição pública, com login simples |
+
 ### URLs ativas
 | URL | Status |
 |---|---|
@@ -141,8 +150,18 @@ rsync -avz dist/ root@72.60.147.56:/var/www/grupowin/sos/
 ```
 
 ### 2. Build e deploy do portal metrics (metrics.grupowin.site)
-- O frontend atual (Vite/React) é o portal institucional — verificar se é o `sos` ou `metrics`
-- Nginx em `/etc/nginx/sites-available/sos.grupowin.site` e `metrics.grupowin.site` já podem existir apontando para `/var/www/...`
+```bash
+# No Codespace:
+npm run build   # gera dist-metrics/
+
+# Copiar para o root realmente servido pelo Nginx:
+rsync -avz --delete dist-metrics/ root@72.60.147.56:/var/www/metrics.grupowin.site/
+```
+
+- O portal metrics está protegido por autenticação básica no Nginx.
+- Publicar em `/var/www/grupowin/metrics/` não atualiza o site servido atualmente.
+- Manter `auth_basic` ativo no vhost `metrics.grupowin.site`.
+- Não expor o portal metrics sem autenticação, porque há dados internos.
 
 ### 3. Criar usuários operacionais adicionais
 - Via `POST /api/auth/usuarios` com token master

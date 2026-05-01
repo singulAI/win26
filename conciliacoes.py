@@ -5,7 +5,7 @@ import csv
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import select, func, insert
+from sqlalchemy import select, func, insert, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.rbac import require_role
@@ -18,7 +18,7 @@ from app.models.integration import (
     IntegrationReport,
 )
 from app.models.user import User, UserRole
-from app.services.reconciliation import process_reconciliation_file, crosscheck_matches_with_database
+from app.services.reconciliation import compare_matches_with_active_report, process_reconciliation_file
 
 router = APIRouter(prefix="/admin/conciliacoes", tags=["Admin - Conciliacoes"])
 integrations_router = APIRouter(
@@ -34,6 +34,8 @@ class UploadResponse(BaseModel):
     total_registros: int
     total_matches: int
     total_divergencias: int
+    comparado_com_relatorio_base: bool
+    total_registros_base: int | None = None
 
 
 @router.post("/upload", response_model=UploadResponse)
@@ -41,6 +43,7 @@ async def upload_conciliacao(
     fornecedor: IntegrationFornecedor = Form(...),
     periodo_ref: date = Form(...),
     arquivo: UploadFile = File(...),
+    arquivo_base_ativos: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.master)),
 ):
@@ -69,15 +72,31 @@ async def upload_conciliacao(
             detail="Nao foi possivel ler o arquivo enviado. Verifique se a planilha esta em .xlsx ou .csv valido e contem cabecalhos.",
         ) from exc
 
-    # Passo 2: Cruzamento com base interna (TEMPORARIAMENTE DESABILITADO PARA TESTES)
+    base_content: bytes | None = None
+    base_filename: str | None = None
+    if arquivo_base_ativos and arquivo_base_ativos.filename:
+        base_filename = arquivo_base_ativos.filename
+        base_content = await arquivo_base_ativos.read()
+        if not base_content:
+            raise HTTPException(status_code=400, detail="Relatório base de veículos ativos vazio")
+
+    comparado_com_relatorio_base = False
+    total_registros_base: int | None = None
+
+    # Passo 2: Cruzamento com relatório-base de veículos ativos enviado no momento da análise.
     try:
-        # total_matches_corrected, total_divergencias_corrected, _ = await crosscheck_matches_with_database(
-        #     processing.matches, db
-        # )
-        total_matches_corrected = processing.total_matches
-        total_divergencias_corrected = processing.total_divergencias
+        if base_filename and base_content:
+            (
+                total_matches_corrected,
+                total_divergencias_corrected,
+                _,
+                total_registros_base,
+            ) = compare_matches_with_active_report(processing.matches, base_filename, base_content)
+            comparado_com_relatorio_base = True
+        else:
+            total_matches_corrected = processing.total_matches
+            total_divergencias_corrected = processing.total_divergencias
     except Exception as exc:
-        # Se cruzamento falhar, usa números preliminares (safe fallback)
         print(f"Cruzamento falhou, usando preprocessamento: {exc}")
         total_matches_corrected = processing.total_matches
         total_divergencias_corrected = processing.total_divergencias
@@ -123,6 +142,9 @@ async def upload_conciliacao(
             "total_registros": processing.total_registros,
             "total_matches": total_matches_corrected,
             "total_divergencias": total_divergencias_corrected,
+            "comparado_com_relatorio_base": comparado_com_relatorio_base,
+            "total_registros_base": total_registros_base,
+            "arquivo_base_ativos": base_filename,
         },
     )
     db.add(audit)
@@ -136,6 +158,8 @@ async def upload_conciliacao(
         total_registros=report.total_registros,
         total_matches=report.total_matches,
         total_divergencias=report.total_divergencias,
+        comparado_com_relatorio_base=comparado_com_relatorio_base,
+        total_registros_base=total_registros_base,
     )
 
 
@@ -165,6 +189,45 @@ async def marcar_conciliado(
     )
     await db.commit()
     return {"id": report.id, "conciliado": report.conciliado}
+
+
+@router.delete("/{report_id}")
+async def remover_conciliacao(
+    report_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.master)),
+):
+    """Remove um relatório de conciliação e todos os matches associados."""
+    result = await db.execute(select(IntegrationReport).where(IntegrationReport.id == report_id))
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(status_code=404, detail="Relatório não encontrado")
+
+    report_snapshot = {
+        "id": report.id,
+        "fornecedor": report.fornecedor.value,
+        "periodo_ref": report.periodo_ref.isoformat(),
+        "total_registros": report.total_registros,
+        "total_matches": report.total_matches,
+        "total_divergencias": report.total_divergencias,
+        "conciliado": report.conciliado,
+    }
+
+    await db.execute(delete(IntegrationMatch).where(IntegrationMatch.report_id == report_id))
+    await db.execute(delete(IntegrationReport).where(IntegrationReport.id == report_id))
+    db.add(
+        AuditLog(
+            acao="CONCILIACAO_REMOVER",
+            entidade="integration_reports",
+            entidade_id=str(report_id),
+            usuario_id=current_user.id,
+            usuario_email=current_user.email,
+            dados_antes=report_snapshot,
+        )
+    )
+    await db.commit()
+
+    return {"id": report_id, "removido": True}
 
 
 @router.get("/resumo")
@@ -292,7 +355,9 @@ async def listar_divergencias(
         select(IntegrationMatch)
         .where(
             IntegrationMatch.report_id == report_id,
-            IntegrationMatch.status_match == IntegrationMatchStatus.divergente,
+            IntegrationMatch.status_match.in_(
+                [IntegrationMatchStatus.divergente, IntegrationMatchStatus.nao_encontrado]
+            ),
         )
         .order_by(IntegrationMatch.id.desc())
     )
@@ -349,11 +414,12 @@ async def integrations_upload_alias(
     fornecedor: IntegrationFornecedor,
     periodo_ref: date,
     arquivo: UploadFile = File(...),
+    arquivo_base_ativos: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.master)),
 ):
     """Alias para POST /admin/conciliacoes/upload (compatibilidade README)."""
-    return await upload_conciliacao(fornecedor, periodo_ref, arquivo, db, current_user)
+    return await upload_conciliacao(fornecedor, periodo_ref, arquivo, arquivo_base_ativos, db, current_user)
 
 
 @integrations_router.get("")

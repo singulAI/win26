@@ -10,6 +10,7 @@ import {
   LogOut,
   ShieldCheck,
   Target,
+  Trash2,
   TrendingUp,
   Truck,
   Upload,
@@ -74,9 +75,11 @@ const Colaborador = () => {
   const [uploadSupplier, setUploadSupplier] = useState("mais_vantagens");
   const [uploadPeriod, setUploadPeriod] = useState(defaultPeriod);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadBaseFile, setUploadBaseFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [deletingReportId, setDeletingReportId] = useState<number | null>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -154,6 +157,75 @@ const Colaborador = () => {
 
   const latestReports = reportsQuery.data || [];
   const selectedReport = latestReports.find((report) => report.id === selectedReportId) || null;
+  const executiveCards = token
+    ? [
+        {
+          icon: Files,
+          title: "Relatórios",
+          value: String(totalSummary.reports),
+          change: `${latestReports.length} disponíveis`,
+          changeType: "neutral" as const,
+          description: "Lotes comparados com a base enviada",
+        },
+        {
+          icon: Users,
+          title: "Registros",
+          value: String(totalSummary.registros),
+          change: `${totalSummary.matches} localizados`,
+          changeType: "up" as const,
+          description: "Linhas analisadas nas conciliações",
+        },
+        {
+          icon: FileCheck,
+          title: "Matches",
+          value: String(totalSummary.matches),
+          change: `${totalSummary.divergencias} pendências`,
+          changeType: "up" as const,
+          description: "Encontrados no relatório-base ativo",
+        },
+        {
+          icon: AlertTriangle,
+          title: "Divergências",
+          value: String(totalSummary.divergencias),
+          change: summaryQuery.data?.placas_duplicadas ? `${summaryQuery.data.placas_duplicadas} duplicadas` : undefined,
+          changeType: "down" as const,
+          description: "Itens fora da base ativa atual",
+        },
+      ]
+    : [
+        {
+          icon: Users,
+          title: "Associados",
+          value: "4.832",
+          change: "+12.3%",
+          changeType: "up" as const,
+          description: "Base ativa de associados",
+        },
+        {
+          icon: Truck,
+          title: "Acionamentos",
+          value: "56",
+          change: "+8 este mês",
+          changeType: "neutral" as const,
+          description: "Eventos danosos em andamento",
+        },
+        {
+          icon: ShieldCheck,
+          title: "Vistorias",
+          value: "142",
+          change: "+23%",
+          changeType: "up" as const,
+          description: "Adesões e migrações",
+        },
+        {
+          icon: BarChart3,
+          title: "Taxa de automação",
+          value: "94%",
+          change: "+6pp",
+          changeType: "up" as const,
+          description: "Processos sem intervenção humana",
+        },
+      ];
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -181,6 +253,7 @@ const Colaborador = () => {
     setUploadError(null);
     setUploadSuccess(null);
     setUploadFile(null);
+    setUploadBaseFile(null);
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -189,11 +262,22 @@ const Colaborador = () => {
     setUploadFile(event.target.files?.[0] || null);
   };
 
+  const handleBaseFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setUploadSuccess(null);
+    setUploadError(null);
+    setUploadBaseFile(event.target.files?.[0] || null);
+  };
+
   const handleUpload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!uploadFile) {
       setUploadError("Selecione um arquivo .xlsx ou .csv para importar.");
+      return;
+    }
+
+    if (!uploadBaseFile) {
+      setUploadError("Selecione o relatório base de veículos ativos para usar na comparação.");
       return;
     }
 
@@ -206,6 +290,7 @@ const Colaborador = () => {
       formData.append("fornecedor", uploadSupplier);
       formData.append("periodo_ref", `${uploadPeriod}-01`);
       formData.append("arquivo", uploadFile);
+      formData.append("arquivo_base_ativos", uploadBaseFile);
 
       const response = await apiRequest<ReconciliationUploadResponse>("/admin/conciliacoes/upload", {
         method: "POST",
@@ -213,10 +298,15 @@ const Colaborador = () => {
         token,
       });
 
+      const comparisonSuffix = response.comparado_com_relatorio_base
+        ? ` comparados contra ${response.total_registros_base || 0} registros da base ativa.`
+        : " sem relatório-base de ativos.";
+
       setUploadSuccess(
-        `Upload concluído: ${supplierLabel(response.fornecedor)} ${formatMonth(response.periodo_ref)} com ${response.total_registros} registros.`,
+        `Upload concluído: ${supplierLabel(response.fornecedor)} ${formatMonth(response.periodo_ref)} com ${response.total_registros} registros.${comparisonSuffix}`,
       );
       setUploadFile(null);
+      setUploadBaseFile(null);
       setSelectedReportId(response.report_id);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["conciliacoes-resumo", token] }),
@@ -227,6 +317,47 @@ const Colaborador = () => {
       setUploadError(error instanceof Error ? error.message : "Falha ao enviar o arquivo.");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleDeleteReport = async (report: ReconciliationReport) => {
+    if (!token || deletingReportId !== null) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Remover o relatório ${supplierLabel(report.fornecedor)} de ${formatMonth(report.periodo_ref)}? Esta ação exclui o lote importado e suas divergências.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingReportId(report.id);
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    try {
+      await apiRequest<{ id: number; removido: boolean }>(`/admin/conciliacoes/${report.id}`, {
+        method: "DELETE",
+        token,
+      });
+
+      if (selectedReportId === report.id) {
+        const nextReport = latestReports.find((item) => item.id !== report.id);
+        setSelectedReportId(nextReport?.id || null);
+      }
+
+      setUploadSuccess(`Relatório ${supplierLabel(report.fornecedor)} ${formatMonth(report.periodo_ref)} removido com sucesso.`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["conciliacoes-resumo", token] }),
+        queryClient.invalidateQueries({ queryKey: ["conciliacoes-lista", token] }),
+        queryClient.invalidateQueries({ queryKey: ["conciliacoes-divergencias", token] }),
+      ]);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Falha ao remover o relatório.");
+    } finally {
+      setDeletingReportId(null);
     }
   };
 
@@ -257,42 +388,18 @@ const Colaborador = () => {
         </motion.div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard
-            icon={Users}
-            title="Associados"
-            value="4.832"
-            change="+12.3%"
-            changeType="up"
-            description="Base ativa de associados"
-            delay={0.1}
-          />
-          <KPICard
-            icon={Truck}
-            title="Acionamentos"
-            value="56"
-            change="+8 este mês"
-            changeType="neutral"
-            description="Eventos danosos em andamento"
-            delay={0.15}
-          />
-          <KPICard
-            icon={ShieldCheck}
-            title="Vistorias"
-            value="142"
-            change="+23%"
-            changeType="up"
-            description="Adesões e migrações"
-            delay={0.2}
-          />
-          <KPICard
-            icon={BarChart3}
-            title="Taxa de automação"
-            value="94%"
-            change="+6pp"
-            changeType="up"
-            description="Processos sem intervenção humana"
-            delay={0.25}
-          />
+          {executiveCards.map((card, index) => (
+            <KPICard
+              key={card.title}
+              icon={card.icon}
+              title={card.title}
+              value={card.value}
+              change={card.change}
+              changeType={card.changeType}
+              description={card.description}
+              delay={0.1 + index * 0.05}
+            />
+          ))}
         </div>
 
         <motion.div
@@ -424,7 +531,7 @@ const Colaborador = () => {
                 </p>
                 <h2 className="text-lg font-semibold text-foreground">Importar planilha do fornecedor</h2>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Envie o arquivo para gerar o relatório de cruzamento e alimentar o painel abaixo.
+                  Envie a planilha do fornecedor e o relatório-base de veículos ativos para gerar a comparação real.
                 </p>
               </div>
               <div className="w-11 h-11 rounded-xl bg-gold/10 flex items-center justify-center shrink-0">
@@ -457,17 +564,37 @@ const Colaborador = () => {
               </div>
             </div>
 
-            <div className="mt-4">
-              <label className="block text-xs font-medium text-muted-foreground mb-2">Arquivo .xlsx ou .csv</label>
-              <input
-                type="file"
-                accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                onChange={handleFileChange}
-                disabled={!token || isUploading}
-                className="block w-full rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-sm text-muted-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-xs file:font-medium file:text-primary-foreground disabled:opacity-60"
-              />
-              <p className="mt-2 text-[11px] text-muted-foreground">
-                Estrutura esperada: planilha com cabecalho e coluna de placa. O envio so e liberado para perfil master autenticado.
+            <div className="mt-4 grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-2">Planilha do fornecedor (.xlsx ou .csv)</label>
+                <input
+                  type="file"
+                  accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  onChange={handleFileChange}
+                  disabled={!token || isUploading}
+                  className="block w-full rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-sm text-muted-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-xs file:font-medium file:text-primary-foreground disabled:opacity-60"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-gold/20 bg-gold/5 p-4">
+                <p className="text-[10px] sm:text-xs font-medium tracking-[0.18em] uppercase text-gold mb-2">
+                  Base ativa obrigatória
+                </p>
+                <label className="block text-xs font-medium text-muted-foreground mb-2">Relatório base de veículos ativos (.xlsx ou .csv)</label>
+                <input
+                  type="file"
+                  accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  onChange={handleBaseFileChange}
+                  disabled={!token || isUploading}
+                  className="block w-full rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-sm text-muted-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-xs file:font-medium file:text-primary-foreground disabled:opacity-60"
+                />
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Sem esse arquivo, a comparação não reflete os associados ativos do momento.
+                </p>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground">
+                A análise usa a ordem placa, modelo do veículo, cpf e nome. O relatório-base de ativos passa a ser a referência real dos associados cadastrados no momento do upload.
               </p>
             </div>
 
@@ -565,16 +692,15 @@ const Colaborador = () => {
                         latestReports.map((report) => {
                           const isSelected = selectedReportId === report.id;
                           return (
-                            <button
+                            <div
                               key={report.id}
-                              onClick={() => setSelectedReportId(report.id)}
                               className={`w-full rounded-2xl border px-4 py-4 text-left transition-colors ${
                                 isSelected
                                   ? "border-gold/40 bg-gold/5"
                                   : "border-border/50 bg-background/30 hover:border-border"
                               }`}
                             >
-                              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                 <div>
                                   <p className="text-sm font-semibold text-foreground">
                                     {supplierLabel(report.fornecedor)} • {formatMonth(report.periodo_ref)}
@@ -583,15 +709,33 @@ const Colaborador = () => {
                                     Criado em {formatDate(report.criado_em)}
                                   </p>
                                 </div>
-                                <span
-                                  className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-[10px] font-medium ${
-                                    report.conciliado
-                                      ? "bg-emerald-500/10 text-emerald-500"
-                                      : "bg-amber-500/10 text-amber-500"
-                                  }`}
-                                >
-                                  {report.conciliado ? "Conciliado" : "Pendente"}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-[10px] font-medium ${
+                                      report.conciliado
+                                        ? "bg-emerald-500/10 text-emerald-500"
+                                        : "bg-amber-500/10 text-amber-500"
+                                    }`}
+                                  >
+                                    {report.conciliado ? "Conciliado" : "Pendente"}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedReportId(report.id)}
+                                    className="inline-flex items-center rounded-full border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                                  >
+                                    {isSelected ? "Selecionado" : "Selecionar"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteReport(report)}
+                                    disabled={deletingReportId === report.id}
+                                    className="inline-flex items-center gap-1 rounded-full border border-red-500/20 px-3 py-1 text-[10px] font-medium text-red-500 disabled:opacity-60"
+                                  >
+                                    {deletingReportId === report.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                                    Remover
+                                  </button>
+                                </div>
                               </div>
 
                               <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
@@ -608,7 +752,7 @@ const Colaborador = () => {
                                   <p className="font-semibold text-red-500 mt-1">{report.total_divergencias}</p>
                                 </div>
                               </div>
-                            </button>
+                            </div>
                           );
                         })
                       )}
@@ -737,10 +881,14 @@ const Colaborador = () => {
           </div>
         ) : null}
 
-        <BIChartsPanel />
-        <ModulesGrid />
-        <IntegrationsPanel />
-        <RBACPanel />
+        {!token ? (
+          <>
+            <BIChartsPanel />
+            <ModulesGrid />
+            <IntegrationsPanel />
+            <RBACPanel />
+          </>
+        ) : null}
 
         <motion.div
           initial={{ opacity: 0 }}
@@ -754,7 +902,7 @@ const Colaborador = () => {
         </motion.div>
       </div>
 
-      <AIAssistantPanel />
+      {!token ? <AIAssistantPanel /> : null}
     </div>
   );
 };

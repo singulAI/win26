@@ -44,6 +44,44 @@ PLATE_COLUMNS = {
     "veiculo_placa",
 }
 
+PLATE_ALIAS_COLUMNS = {
+    "beneficio",
+    "benefício",
+    "beneficio associado",
+    "benefício associado",
+    "numero do beneficio",
+    "n do beneficio",
+    "número do benefício",
+}
+
+VEHICLE_MODEL_COLUMNS = {
+    "modelo",
+    "modelo veiculo",
+    "modelo veículo",
+    "modelo do veiculo",
+    "modelo do veículo",
+    "veiculo",
+    "veículo",
+    "marca modelo",
+}
+
+CPF_COLUMNS = {
+    "cpf",
+    "cpf cnpj",
+    "cpf/cnpj",
+    "documento",
+    "documento associado",
+}
+
+NAME_COLUMNS = {
+    "nome",
+    "nome associado",
+    "associado",
+    "cliente",
+    "nome cliente",
+    "nome do associado",
+}
+
 
 def _normalize_plate(value: str | None) -> str | None:
     """Normaliza placa: remove não-alfanuméricos, maiúsculas. Retorna None se vazio."""
@@ -77,6 +115,8 @@ def _detect_header_row(raw_rows: list[tuple[Any, ...]]) -> int | None:
         "nome",
         "cpf cnpj",
         "beneficio",
+        "modelo",
+        "veiculo",
         "chassi",
         "situacao origem",
         "plano origem",
@@ -160,39 +200,204 @@ def _extract_rows(filename: str, content: bytes) -> list[dict[str, Any]]:
     raise ValueError("Formato inválido. Envie .xlsx ou .csv")
 
 
-def _find_plate_column(headers: set[str]) -> str | None:
-    """Encontra nome da coluna de placa nos headers normalizados."""
-    normalized_candidates = {_normalize_key(candidate) for candidate in PLATE_COLUMNS}
+def _find_matching_column(headers: set[str], candidates: set[str], contains_terms: tuple[str, ...] = ()) -> str | None:
+    normalized_candidates = {_normalize_key(candidate) for candidate in candidates}
 
     for key in headers:
         if key in normalized_candidates:
             return key
 
-    for key in headers:
-        if "placa" in key.split():
-            return key
-
-    for key in headers:
-        if "placa" in key:
-            return key
+    if contains_terms:
+        for key in headers:
+            if all(term in key for term in contains_terms):
+                return key
 
     return None
 
 
+def _find_plate_column(headers: set[str]) -> str | None:
+    """Encontra nome da coluna de placa nos headers normalizados."""
+    explicit_plate_column = _find_matching_column(headers, PLATE_COLUMNS, ("placa",))
+    if explicit_plate_column:
+        return explicit_plate_column
+
+    return _find_matching_column(headers, PLATE_ALIAS_COLUMNS, ("beneficio",))
+
+
+def _find_vehicle_model_column(headers: set[str]) -> str | None:
+    return _find_matching_column(headers, VEHICLE_MODEL_COLUMNS, ("modelo",))
+
+
+def _find_cpf_column(headers: set[str]) -> str | None:
+    cpf_column = _find_matching_column(headers, CPF_COLUMNS, ("cpf",))
+    if cpf_column:
+        return cpf_column
+
+    return _find_matching_column(headers, CPF_COLUMNS, ("documento",))
+
+
+def _find_name_column(headers: set[str]) -> str | None:
+    name_column = _find_matching_column(headers, NAME_COLUMNS, ("nome",))
+    if name_column:
+        return name_column
+
+    return _find_matching_column(headers, NAME_COLUMNS, ("associado",))
+
+
+def _find_identifier_columns(headers: set[str]) -> dict[str, str | None]:
+    return {
+        "placa": _find_plate_column(headers),
+        "modelo_veiculo": _find_vehicle_model_column(headers),
+        "cpf": _find_cpf_column(headers),
+        "nome": _find_name_column(headers),
+    }
+
+
+def _get_row_value_by_normalized_column(row: dict[str, Any], normalized_column: str | None) -> Any:
+    if not normalized_column:
+        return None
+
+    for key, value in row.items():
+        if key != SOURCE_ROW_KEY and _normalize_key(key) == normalized_column:
+            return value
+
+    return None
+
+
+def _normalize_document(value: str | None) -> str | None:
+    if not value:
+        return None
+    normalized = re.sub(r"\D", "", value)
+    return normalized or None
+
+
+def _normalize_text_identifier(value: str | None) -> str | None:
+    normalized = _normalize_key(value)
+    return normalized or None
+
+
+def _extract_identity_fields(row: dict[str, Any], identifier_columns: dict[str, str | None]) -> dict[str, str | None]:
+    plate_raw = _get_row_value_by_normalized_column(row, identifier_columns["placa"])
+    model_raw = _get_row_value_by_normalized_column(row, identifier_columns["modelo_veiculo"])
+    cpf_raw = _get_row_value_by_normalized_column(row, identifier_columns["cpf"])
+    name_raw = _get_row_value_by_normalized_column(row, identifier_columns["nome"])
+
+    plate = _normalize_plate(str(plate_raw) if plate_raw is not None else None)
+    vehicle_model = _normalize_text_identifier(str(model_raw) if model_raw is not None else None)
+    cpf = _normalize_document(str(cpf_raw) if cpf_raw is not None else None)
+    name = _normalize_text_identifier(str(name_raw) if name_raw is not None else None)
+
+    identifier_type: str | None = None
+    identifier_value: str | None = None
+
+    if plate:
+        identifier_type = "placa"
+        identifier_value = plate
+    elif vehicle_model:
+        identifier_type = "modelo_veiculo"
+        identifier_value = vehicle_model
+    elif cpf:
+        identifier_type = "cpf"
+        identifier_value = cpf
+    elif name:
+        identifier_type = "nome"
+        identifier_value = name
+
+    return {
+        "placa_normalizada": plate,
+        "modelo_veiculo": vehicle_model,
+        "cpf": cpf,
+        "nome": name,
+        "identificador_tipo": identifier_type,
+        "identificador_valor": identifier_value,
+    }
+
+
 def _validate_file_structure(rows: list[dict[str, Any]]) -> None:
-    """Valida que arquivo tem coluna de placa."""
+    """Valida que arquivo tem ao menos um identificador utilizável."""
     if not rows:
         raise ValueError("Arquivo sem dados (ou apenas headers)")
     
     first_row_keys = {_normalize_key(k) for k in rows[0].keys() if k != SOURCE_ROW_KEY}
-    plate_col = _find_plate_column(first_row_keys)
+    identifier_columns = _find_identifier_columns(first_row_keys)
     
-    if not plate_col:
-        plate_options = ", ".join(PLATE_COLUMNS)
+    if not any(identifier_columns.values()):
         found_headers = ", ".join(str(key) for key in rows[0].keys() if key != SOURCE_ROW_KEY)
         raise ValueError(
-            f"Nenhuma coluna de placa encontrada. Esperado um de: {plate_options}. Cabecalhos encontrados: {found_headers}"
+            "Nenhuma coluna de identificacao encontrada. "
+            "A planilha precisa ter ao menos um destes campos, nesta ordem de prioridade: placa, modelo do veiculo, cpf ou nome. "
+            f"Cabecalhos encontrados: {found_headers}"
         )
+
+
+def _build_duplicate_reason(identifier_type: str | None, source: str) -> str:
+    if identifier_type == "placa":
+        return f"placa_duplicada_{source}"
+    if identifier_type:
+        return f"{identifier_type}_duplicado_{source}"
+    return f"identificador_duplicado_{source}"
+
+
+def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if key != SOURCE_ROW_KEY}
+
+
+def _build_reference_indexes(rows: list[dict[str, Any]]) -> tuple[dict[str, dict[str, list[dict[str, Any]]]], int]:
+    if not rows:
+        return {"placa": {}, "modelo_veiculo": {}, "cpf": {}, "nome": {}}, 0
+
+    first_row_normalized = {_normalize_key(k): k for k in rows[0].keys() if k != SOURCE_ROW_KEY}
+    identifier_columns = _find_identifier_columns(set(first_row_normalized.keys()))
+    indexes: dict[str, dict[str, list[dict[str, Any]]]] = {
+        "placa": {},
+        "modelo_veiculo": {},
+        "cpf": {},
+        "nome": {},
+    }
+
+    for row in rows:
+        identity_fields = _extract_identity_fields(row, identifier_columns)
+        snapshot = {
+            "linha": row.get(SOURCE_ROW_KEY),
+            "dados_base": _snapshot_row(row),
+        }
+        reference_values = {
+            "placa": identity_fields.get("placa_normalizada"),
+            "modelo_veiculo": identity_fields.get("modelo_veiculo"),
+            "cpf": identity_fields.get("cpf"),
+            "nome": identity_fields.get("nome"),
+        }
+
+        for field_name, value in reference_values.items():
+            if not value:
+                continue
+            indexes[field_name].setdefault(value, []).append(snapshot)
+
+    return indexes, len(rows)
+
+
+def _resolve_match_against_reference(
+    match: dict[str, Any],
+    indexes: dict[str, dict[str, list[dict[str, Any]]]],
+) -> tuple[str, str | None, dict[str, Any] | None]:
+    identifiers = (
+        ("placa", match.get("placa_normalizada")),
+        ("modelo_veiculo", match.get("dados_interno", {}).get("modelo_veiculo")),
+        ("cpf", match.get("dados_interno", {}).get("cpf")),
+        ("nome", match.get("dados_interno", {}).get("nome")),
+    )
+
+    for identifier_type, identifier_value in identifiers:
+        if not identifier_value:
+            continue
+
+        candidates = indexes.get(identifier_type, {}).get(identifier_value, [])
+        if len(candidates) == 1:
+            return "encontrado", identifier_type, candidates[0]
+        if len(candidates) > 1:
+            return "ambiguo", identifier_type, {"total": len(candidates)}
+
+    return "nao_encontrado", None, None
 
 
 
@@ -208,47 +413,48 @@ def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
     Cruzamento é feito async em conciliacoes.py com função crosscheck.
     """
     rows = _extract_rows(filename, content)
-    _validate_file_structure(rows)  # Valida presença de coluna placa
+    _validate_file_structure(rows)
     
     if not rows:
         return ProcessResult(0, 0, 0, [])
 
-    # Encontra coluna placa (normalizada)
     first_row_normalized = {_normalize_key(k): k for k in rows[0].keys() if k != SOURCE_ROW_KEY}
-    plate_col_normalized = _find_plate_column(set(first_row_normalized.keys()))
+    identifier_columns = _find_identifier_columns(set(first_row_normalized.keys()))
 
-    seen_plates: dict[str | None, int] = {}  # plate → count para detectar duplicatas
+    seen_identifiers: dict[tuple[str, str] | None, int] = {}
     matches: list[dict[str, Any]] = []
     
     for idx, row in enumerate(rows):
-        # Encontra valor da placa na row
-        plate_raw = None
-        for key in row.keys():
-            if key != SOURCE_ROW_KEY and _normalize_key(key) == plate_col_normalized:
-                plate_raw = row[key]
-                break
+        identity_fields = _extract_identity_fields(row, identifier_columns)
+        plate = identity_fields["placa_normalizada"]
+        identifier_key = None
+        if identity_fields["identificador_tipo"] and identity_fields["identificador_valor"]:
+            identifier_key = (identity_fields["identificador_tipo"], identity_fields["identificador_valor"])
         
-        plate = _normalize_plate(str(plate_raw) if plate_raw is not None else None)
-        
-        # Marca duplicatas (INCLUSIVE primeira ocorrência)
-        if plate:
-            seen_plates[plate] = seen_plates.get(plate, 0) + 1
+        # Marca duplicatas com fallback de identificador: placa -> modelo -> cpf -> nome.
+        if identifier_key:
+            seen_identifiers[identifier_key] = seen_identifiers.get(identifier_key, 0) + 1
         else:
-            seen_plates[None] = seen_plates.get(None, 0) + 1
+            seen_identifiers[None] = seen_identifiers.get(None, 0) + 1
         
-        row_data = {key: value for key, value in row.items() if key != SOURCE_ROW_KEY}
+        row_data = _snapshot_row(row)
 
         # Status será determinado no cruzamento, inicialmente assume-se nao_encontrado
         status = IntegrationMatchStatus.nao_encontrado
         internal_data = {
             "linha": row.get(SOURCE_ROW_KEY, idx + 2),
             "motivo_preprocessamento": None,
+            "identificador_tipo": identity_fields["identificador_tipo"],
+            "identificador_valor": identity_fields["identificador_valor"],
+            "modelo_veiculo": identity_fields["modelo_veiculo"],
+            "cpf": identity_fields["cpf"],
+            "nome": identity_fields["nome"],
         }
         
         # Validações de preprocessamento
-        if not plate:
+        if not identifier_key:
             status = IntegrationMatchStatus.divergente
-            internal_data["motivo_preprocessamento"] = "placa_inválida_ou_vazia"
+            internal_data["motivo_preprocessamento"] = "nenhum_identificador_localizado"
         
         matches.append({
             "placa_normalizada": plate,
@@ -257,17 +463,21 @@ def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
             "dados_fornecedor": row_data,
             "dados_interno": internal_data,
         })
-    
-    # Marca TODAS as duplicatas como divergentes (flag para revisão manual)
-    duplicata_plates = {p for p, count in seen_plates.items() if count > 1}
-    total_divergencias = len(duplicata_plates) * seen_plates.get(None, 0)  # Contagem incorreta; será corrigida abaixo
-    total_divergencias = 0  # Reset
+
+    duplicate_identifiers = {key for key, count in seen_identifiers.items() if key is not None and count > 1}
+    total_divergencias = 0
     
     for match in matches:
-        if match["placa_normalizada"] in duplicata_plates:
+        identifier_type = match["dados_interno"].get("identificador_tipo")
+        identifier_value = match["dados_interno"].get("identificador_valor")
+        identifier_key = None
+        if identifier_type and identifier_value:
+            identifier_key = (identifier_type, identifier_value)
+
+        if identifier_key in duplicate_identifiers:
             match["status_match"] = IntegrationMatchStatus.divergente
             if not match["dados_interno"].get("motivo_preprocessamento"):
-                match["dados_interno"]["motivo_preprocessamento"] = "placa_duplicada_no_arquivo"
+                match["dados_interno"]["motivo_preprocessamento"] = _build_duplicate_reason(identifier_type, "no_arquivo")
             total_divergencias += 1
         elif match["dados_interno"].get("motivo_preprocessamento"):
             total_divergencias += 1
@@ -284,6 +494,52 @@ def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
     )
 
 
+def compare_matches_with_active_report(
+    matches: list[dict[str, Any]],
+    filename: str,
+    content: bytes,
+) -> tuple[int, int, int, int]:
+    rows = _extract_rows(filename, content)
+    _validate_file_structure(rows)
+    indexes, total_base_registros = _build_reference_indexes(rows)
+
+    total_matches_corrected = 0
+    total_divergencias_corrected = 0
+
+    for match in matches:
+        if match["dados_interno"].get("motivo_preprocessamento"):
+            match["status_match"] = IntegrationMatchStatus.divergente
+            total_divergencias_corrected += 1
+            continue
+
+        resolution, identifier_type, payload = _resolve_match_against_reference(match, indexes)
+
+        if resolution == "encontrado" and payload is not None:
+            match["status_match"] = IntegrationMatchStatus.encontrado
+            match["dados_interno"]["motivo_preprocessamento"] = None
+            match["dados_interno"]["origem_comparacao"] = "relatorio_veiculos_ativos"
+            match["dados_interno"]["identificador_localizado"] = identifier_type
+            match["dados_interno"]["linha_base"] = payload.get("linha")
+            match["dados_interno"]["dados_base"] = payload.get("dados_base")
+            total_matches_corrected += 1
+            continue
+
+        if resolution == "ambiguo":
+            match["status_match"] = IntegrationMatchStatus.divergente
+            match["dados_interno"]["motivo_preprocessamento"] = _build_duplicate_reason(identifier_type, "no_relatorio_base")
+            match["dados_interno"]["origem_comparacao"] = "relatorio_veiculos_ativos"
+            match["dados_interno"]["quantidade_correspondencias_base"] = payload.get("total") if payload else None
+            total_divergencias_corrected += 1
+            continue
+
+        match["status_match"] = IntegrationMatchStatus.nao_encontrado
+        match["dados_interno"]["motivo_preprocessamento"] = "nao_localizado_no_relatorio_base"
+        match["dados_interno"]["origem_comparacao"] = "relatorio_veiculos_ativos"
+        total_divergencias_corrected += 1
+
+    return total_matches_corrected, total_divergencias_corrected, total_matches_corrected, total_base_registros
+
+
 async def crosscheck_matches_with_database(
     matches: list[dict[str, Any]], 
     session: Any  # AsyncSession, mas evita import circular
@@ -294,48 +550,18 @@ async def crosscheck_matches_with_database(
     
     Retorna: (total_matches_corrigido, total_divergencias_corrigido, total_matches_encontrados)
     """
-    from sqlalchemy import select, func
-    from app.models.case import Case
-    
-    # Agrupa matches por placa para cruzamento eficiente
-    plates_to_find = {m["placa_normalizada"] for m in matches if m["placa_normalizada"]}
-    
-    if not plates_to_find:
-        # Nenhuma placa válida: todos permanecem divergentes
-        total_divergencias = sum(1 for m in matches if m["status_match"] == IntegrationMatchStatus.divergente)
-        return 0, total_divergencias, 0
-    
-    # Query: encontra cases com placa correspondente
-    # NOTA: presume que `Case` tem coluna `placa` normalizada ou método de busca
-    # Se não estiver, esta query falhará — ajuste conforme schema real
-    stmt = select(Case.id, Case.placa).where(Case.placa.in_(plates_to_find))
-    result = await session.execute(stmt)
-    case_map = {row.placa: row.id for row in result.fetchall()}
-    
     total_matches_corrected = 0
     total_divergencias_corrected = 0
-    
+
     for match in matches:
-        placa = match["placa_normalizada"]
-        
-        # Se já marcado como divergente em preprocessamento, mantém
         if match["dados_interno"].get("motivo_preprocessamento"):
             match["status_match"] = IntegrationMatchStatus.divergente
             total_divergencias_corrected += 1
             continue
-        
-        # Busca case correspondente
-        if placa in case_map:
-            match["case_id"] = case_map[placa]
-            match["status_match"] = IntegrationMatchStatus.encontrado
-            match["dados_interno"]["motivo_preprocessamento"] = None
-            match["dados_interno"]["case_id_encontrado"] = case_map[placa]
-            total_matches_corrected += 1
-        else:
-            # Não encontrado na base interna
-            match["status_match"] = IntegrationMatchStatus.nao_encontrado
-            match["dados_interno"]["motivo_preprocessamento"] = "case_nao_encontrado_na_base"
-            total_divergencias_corrected += 1
+
+        match["status_match"] = IntegrationMatchStatus.nao_encontrado
+        match["dados_interno"]["motivo_preprocessamento"] = "base_interna_nao_configurada_para_cruzamento"
+        total_divergencias_corrected += 1
     
     total_encontrados = sum(1 for m in matches if m["status_match"] == IntegrationMatchStatus.encontrado)
     

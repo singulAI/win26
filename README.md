@@ -361,6 +361,7 @@ X-Siprov-Token: <SIPROV_WEBHOOK_SECRET>
 | Diretório VPS | `/root/grupowin-api` |
 
 ### Próximas tarefas
+
 1. Build do frontend React (Vite) e deploy em `sos.grupowin.site`
 2. Build do portal metrics e deploy em `metrics.grupowin.site`
 3. Criar usuários operacionais adicionais via `POST /api/auth/usuarios`

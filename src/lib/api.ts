@@ -108,4 +108,6 @@ export interface ReconciliationUploadResponse {
   total_registros: number;
   total_matches: number;
   total_divergencias: number;
+  comparado_com_relatorio_base: boolean;
+  total_registros_base: number | null;
 }
