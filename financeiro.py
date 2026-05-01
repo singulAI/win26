@@ -54,30 +54,20 @@ async def gerar_segunda_via(
     """
     # Valida associado
     try:
-        pessoa = await siprov.get_pessoa(payload.codPessoa)
-        if pessoa.get("status") == "INATIVO":
-            raise HTTPException(400, "Associado inativo — segunda via não permitida")
-        if pessoa.get("status") == "SUSPENSO":
-            raise HTTPException(400, "Associado suspenso — contate a administração")
+        pessoa = await siprov.get_associado(payload.codPessoa)
+        if pessoa:
+            if pessoa.get("situacao") == "INATIVO":
+                raise HTTPException(400, "Associado inativo — segunda via não permitida")
+            if pessoa.get("situacao") == "SUSPENSO":
+                raise HTTPException(400, "Associado suspenso — contate a administração")
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(502, f"Erro ao consultar associado: {str(e)}")
 
-    # Valida veículo (se informado)
-    if payload.codVeiculo:
-        try:
-            veiculo = await siprov.get_veiculo(payload.codVeiculo)
-            if veiculo.get("status") == "INATIVO":
-                raise HTTPException(400, "Veículo inativo — segunda via não permitida")
-        except HTTPException:
-            raise
-        except Exception:
-            pass
-
-    # Gera segunda via no Siprov
+    # Emite segunda via (boleto) no Siprov
     try:
-        resultado = await siprov.gerar_segunda_via(payload.codTitulo)
+        resultado = await siprov.emitir_boleto(payload.codTitulo)
         return resultado
     except Exception as e:
         raise HTTPException(502, f"Erro ao gerar segunda via: {str(e)}")
@@ -85,14 +75,19 @@ async def gerar_segunda_via(
 
 @router.get("/titulos")
 async def listar_titulos(
-    cod_pessoa: int = Query(..., description="Código do associado"),
+    cpf_cnpj: Optional[str] = Query(None, description="CPF ou CNPJ do associado"),
     situacao: Optional[str] = Query(None, description="ABERTO|VENCIDO|LIQUIDADO|CANCELADO"),
-    cod_veiculo: Optional[int] = None,
+    tipo: str = Query("DEBITO", description="Tipo do título: DEBITO, CREDITO, RATEIO"),
     current_user: User = Depends(get_current_user),
 ):
-    """Lista títulos de um associado via ERP."""
+    """Lista títulos de um associado via ERP Siprov."""
     try:
-        titulos = await siprov.get_titulos(cod_pessoa, situacao, cod_veiculo)
+        params: dict = {}
+        if cpf_cnpj:
+            params["cpfCnpj"] = cpf_cnpj
+        if situacao:
+            params["situacao"] = situacao
+        titulos = await siprov.pesquisar_titulos(tipo=tipo, **params)
         return {"titulos": titulos, "total": len(titulos)}
     except Exception as e:
         raise HTTPException(502, f"Erro ao consultar títulos: {str(e)}")
@@ -105,15 +100,20 @@ async def dashboard_associado(
 ):
     """Dashboard completo do associado: dados, veículos, títulos em aberto, vencidos, score."""
     try:
-        pessoa = await siprov.get_pessoa(cod_pessoa)
+        pessoa = await siprov.get_associado(cod_pessoa)
+        if not pessoa:
+            raise HTTPException(404, "Associado não encontrado")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(502, f"Erro ao consultar associado: {str(e)}")
 
-    # Busca títulos
+    # Busca títulos por CPF/CNPJ do associado
+    cpf_cnpj = pessoa.get("cpfCnpj") or pessoa.get("cpf")
     try:
-        abertos = await siprov.get_titulos(cod_pessoa, "ABERTO")
-        vencidos = await siprov.get_titulos(cod_pessoa, "VENCIDO")
-        liquidados = await siprov.get_titulos(cod_pessoa, "LIQUIDADO")
+        abertos = await siprov.pesquisar_titulos(tipo="DEBITO", cpfCnpj=cpf_cnpj, situacao="ABERTO")
+        vencidos = await siprov.pesquisar_titulos(tipo="DEBITO", cpfCnpj=cpf_cnpj, situacao="VENCIDO")
+        liquidados = await siprov.pesquisar_titulos(tipo="DEBITO", cpfCnpj=cpf_cnpj, situacao="LIQUIDADO")
     except Exception:
         abertos, vencidos, liquidados = [], [], []
 
@@ -133,12 +133,13 @@ async def dashboard_associado(
     return {
         "pessoa": {
             "codPessoa": pessoa.get("codPessoa"),
-            "nome": pessoa.get("nome"),
-            "cpf": pessoa.get("cpf"),
-            "status": pessoa.get("status"),
+            "nome": pessoa.get("nomePessoa"),
+            "cpf": pessoa.get("cpfCnpj"),
+            "situacao": pessoa.get("situacao"),
             "dataAdesao": pessoa.get("dataAdesao"),
         },
-        "veiculos": pessoa.get("veiculos", []),
+        "placa": pessoa.get("placa"),
+        "chassi": pessoa.get("chassi"),
         "titulos_abertos": {
             "quantidade": len(abertos),
             "valor_total": sum(t.get("valor", 0) for t in abertos),

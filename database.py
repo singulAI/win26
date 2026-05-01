@@ -31,4 +31,6 @@ async def get_db():
 async def init_db():
     """Cria todas as tabelas se não existirem."""
     async with engine.begin() as conn:
+        # Ambientes novos podem subir com DB vazio; garante schema antes do create_all.
+        await conn.exec_driver_sql("CREATE SCHEMA IF NOT EXISTS grupowin")
         await conn.run_sync(Base.metadata.create_all)

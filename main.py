@@ -5,7 +5,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth, vistorias, acionamentos, financeiro, bi, ai
+from app.routers import auth, vistorias, acionamentos, financeiro, bi, ai, conciliacoes
 
 
 @asynccontextmanager
@@ -41,6 +41,8 @@ app.include_router(acionamentos.router)
 app.include_router(financeiro.router)
 app.include_router(bi.router)
 app.include_router(ai.router)
+app.include_router(conciliacoes.router)
+app.include_router(conciliacoes.integrations_router)
 
 
 @app.get("/health")

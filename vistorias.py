@@ -53,8 +53,8 @@ async def criar_vistoria(
 ):
     # Valida associado no Siprov (se configurado)
     try:
-        pessoa = await siprov.get_pessoa(payload.cod_pessoa)
-        if pessoa.get("status") == "INATIVO":
+        pessoa = await siprov.get_associado(payload.cod_pessoa)
+        if pessoa and pessoa.get("situacao") == "INATIVO":
             raise HTTPException(400, "Associado inativo — vistoria não permitida")
     except HTTPException:
         raise

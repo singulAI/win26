@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "siprov-api": {
+      "type": "http",
+      "url": "https://doc.siprov.com.br/~gitbook/mcp"
+    }
+  }
+}

@@ -20,7 +20,7 @@ async def funil_operacional(
     dias: int = Query(30, description="Janela de dias para análise"),
     tipo: Optional[str] = Query(None, description="vistoria|revisoria|acionamento"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.master, UserRole.financeiro)()),
+    current_user: User = Depends(require_role(UserRole.master, UserRole.financeiro)),
 ):
     """Funil de conversão: abertos → em andamento → concluídos → cancelados."""
     since = datetime.now(timezone.utc) - timedelta(days=dias)
@@ -75,7 +75,7 @@ async def funil_operacional(
 async def volume_diario(
     dias: int = Query(7, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.master, UserRole.financeiro)()),
+    current_user: User = Depends(require_role(UserRole.master, UserRole.financeiro)),
 ):
     """Volume diário de casos criados nos últimos N dias."""
     since = datetime.now(timezone.utc) - timedelta(days=dias)

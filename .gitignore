@@ -12,9 +12,15 @@ dist
 dist-ssr
 *.local
 
+# Environment / secrets — never commit!
+.env
+.env.local
+.env.production
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/mcp.json
 .idea
 .DS_Store
 *.suo
@@ -22,3 +28,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python local runtime
+.venv/
+.venv312/
+__pycache__/
+*.pyc
