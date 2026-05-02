@@ -13,6 +13,7 @@ from app.models.integration import IntegrationMatchStatus
 
 
 SOURCE_ROW_KEY = "__source_row__"
+PLATE_SPLIT_PATTERN = re.compile(r"\s*[;|]\s*")
 
 
 @dataclass
@@ -82,6 +83,23 @@ NAME_COLUMNS = {
     "nome do associado",
 }
 
+STATUS_COLUMNS = {
+    "situacao",
+    "situação",
+    "status",
+    "status associado",
+    "situacao associado",
+    "situação associado",
+    "situacao veiculo",
+    "situação veículo",
+    "situacao beneficio",
+    "situação benefício",
+    "situacao origem",
+    "situação origem",
+    "situacao destino",
+    "situação destino",
+}
+
 
 def _normalize_plate(value: str | None) -> str | None:
     """Normaliza placa: remove não-alfanuméricos, maiúsculas. Retorna None se vazio."""
@@ -89,6 +107,27 @@ def _normalize_plate(value: str | None) -> str | None:
         return None
     normalized = re.sub(r"[^A-Za-z0-9]", "", value).upper()
     return normalized or None
+
+
+def _extract_plate_candidates(value: str | None) -> list[str]:
+    if not value:
+        return []
+
+    raw_value = str(value).strip()
+    if not raw_value:
+        return []
+
+    parts = PLATE_SPLIT_PATTERN.split(raw_value)
+    if len(parts) == 1:
+        parts = [raw_value]
+
+    candidates: list[str] = []
+    for part in parts:
+        normalized = _normalize_plate(part)
+        if normalized and normalized not in candidates:
+            candidates.append(normalized)
+
+    return candidates
 
 
 def _normalize_key(value: str | None) -> str:
@@ -182,11 +221,27 @@ def _extract_rows_from_xlsx(content: bytes) -> list[dict[str, Any]]:
 def _extract_rows_from_csv(content: bytes) -> list[dict[str, Any]]:
     """Extrai linhas de arquivo CSV usando csv.DictReader."""
     buffer = StringIO(content.decode("utf-8", errors="ignore"))
-    reader = csv.DictReader(buffer)
+    sample = buffer.read(4096)
+    buffer.seek(0)
+
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+    except csv.Error:
+        dialect = csv.excel
+        dialect.delimiter = ","
+
+    reader = csv.DictReader(buffer, dialect=dialect)
     if reader.fieldnames is None or not reader.fieldnames:
         raise ValueError("Arquivo CSV está vazio ou sem headers")
-    
-    rows = [dict(r) for r in reader if any(v for v in r.values() if v)]  # Ignora linhas vazias
+
+    rows = []
+    for line_number, row in enumerate(reader, start=2):
+        if not any(v for v in row.values() if v):
+            continue
+        payload = dict(row)
+        payload[SOURCE_ROW_KEY] = line_number
+        rows.append(payload)
+
     return rows
 
 
@@ -244,12 +299,21 @@ def _find_name_column(headers: set[str]) -> str | None:
     return _find_matching_column(headers, NAME_COLUMNS, ("associado",))
 
 
+def _find_status_column(headers: set[str]) -> str | None:
+    status_column = _find_matching_column(headers, STATUS_COLUMNS, ("situacao",))
+    if status_column:
+        return status_column
+
+    return _find_matching_column(headers, STATUS_COLUMNS, ("status",))
+
+
 def _find_identifier_columns(headers: set[str]) -> dict[str, str | None]:
     return {
         "placa": _find_plate_column(headers),
         "modelo_veiculo": _find_vehicle_model_column(headers),
         "cpf": _find_cpf_column(headers),
         "nome": _find_name_column(headers),
+        "situacao": _find_status_column(headers),
     }
 
 
@@ -281,8 +345,10 @@ def _extract_identity_fields(row: dict[str, Any], identifier_columns: dict[str, 
     model_raw = _get_row_value_by_normalized_column(row, identifier_columns["modelo_veiculo"])
     cpf_raw = _get_row_value_by_normalized_column(row, identifier_columns["cpf"])
     name_raw = _get_row_value_by_normalized_column(row, identifier_columns["nome"])
+    status_raw = _get_row_value_by_normalized_column(row, identifier_columns["situacao"])
 
-    plate = _normalize_plate(str(plate_raw) if plate_raw is not None else None)
+    plate_candidates = _extract_plate_candidates(str(plate_raw) if plate_raw is not None else None)
+    plate = plate_candidates[0] if plate_candidates else None
     vehicle_model = _normalize_text_identifier(str(model_raw) if model_raw is not None else None)
     cpf = _normalize_document(str(cpf_raw) if cpf_raw is not None else None)
     name = _normalize_text_identifier(str(name_raw) if name_raw is not None else None)
@@ -305,9 +371,11 @@ def _extract_identity_fields(row: dict[str, Any], identifier_columns: dict[str, 
 
     return {
         "placa_normalizada": plate,
+        "placas_normalizadas": plate_candidates,
         "modelo_veiculo": vehicle_model,
         "cpf": cpf,
         "nome": name,
+        "situacao_beneficio": str(status_raw).strip() if status_raw not in (None, "") else None,
         "identificador_tipo": identifier_type,
         "identificador_valor": identifier_value,
     }
@@ -342,6 +410,14 @@ def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in row.items() if key != SOURCE_ROW_KEY}
 
 
+def _build_recurrence_note(total_occurrences: int) -> str:
+    if total_occurrences <= 1:
+        return ""
+    if total_occurrences == 2:
+        return "recorrencia_identificada_no_arquivo: 2 lancamentos para o mesmo identificador"
+    return f"recorrencia_identificada_no_arquivo: {total_occurrences} lancamentos para o mesmo identificador"
+
+
 def _build_reference_indexes(rows: list[dict[str, Any]]) -> tuple[dict[str, dict[str, list[dict[str, Any]]]], int]:
     if not rows:
         return {"placa": {}, "modelo_veiculo": {}, "cpf": {}, "nome": {}}, 0
@@ -357,12 +433,14 @@ def _build_reference_indexes(rows: list[dict[str, Any]]) -> tuple[dict[str, dict
 
     for row in rows:
         identity_fields = _extract_identity_fields(row, identifier_columns)
+        status_raw = _get_row_value_by_normalized_column(row, identifier_columns.get("situacao"))
         snapshot = {
             "linha": row.get(SOURCE_ROW_KEY),
             "dados_base": _snapshot_row(row),
+            "situacao_base": str(status_raw).strip() if status_raw not in (None, "") else None,
         }
         reference_values = {
-            "placa": identity_fields.get("placa_normalizada"),
+            "placa": identity_fields.get("placas_normalizadas") or [],
             "modelo_veiculo": identity_fields.get("modelo_veiculo"),
             "cpf": identity_fields.get("cpf"),
             "nome": identity_fields.get("nome"),
@@ -370,6 +448,11 @@ def _build_reference_indexes(rows: list[dict[str, Any]]) -> tuple[dict[str, dict
 
         for field_name, value in reference_values.items():
             if not value:
+                continue
+            if isinstance(value, list):
+                for list_value in value:
+                    if list_value:
+                        indexes[field_name].setdefault(list_value, []).append(snapshot)
                 continue
             indexes[field_name].setdefault(value, []).append(snapshot)
 
@@ -400,6 +483,92 @@ def _resolve_match_against_reference(
     return "nao_encontrado", None, None
 
 
+def _classify_siprov_status(payload: dict[str, Any] | None) -> tuple[str, str, str]:
+    if payload is None:
+        return (
+            "nao_ativo_com_cobranca",
+            "nao_localizado_no_arquivo_siprov",
+            "cessar_cobranca_fornecedor",
+        )
+
+    raw_status = payload.get("situacao_base") or ""
+    normalized_status = _normalize_key(str(raw_status))
+
+    if "inadimpl" in normalized_status:
+        return (
+            "inadimplente_em_protecao_pos_pago",
+            "inadimplente_no_siprov_cobrar_no_mes_posterior",
+            "postergar_cobranca_para_proximo_vencimento",
+        )
+
+    if any(term in normalized_status for term in ("inativo", "cancel", "excluid", "desativ", "bloquead", "cancelado")):
+        return (
+            "inativo_sem_cobranca",
+            "inativo_no_siprov_cessar_cobranca",
+            "cessar_cobranca_fornecedor",
+        )
+
+    if any(term in normalized_status for term in ("ativo", "vigente", "proteg", "adimpl")):
+        return (
+            "ativo_com_cobranca",
+            "ativo_no_siprov_cobranca_devida",
+            "manter_cobranca_fornecedor",
+        )
+
+    return (
+        "ativo_com_cobranca",
+        "situacao_siprov_nao_mapeada_assumida_como_ativa",
+        "manter_cobranca_fornecedor",
+    )
+
+
+def has_embedded_status(matches: list[dict[str, Any]]) -> bool:
+    return any((match.get("dados_interno") or {}).get("situacao_beneficio") for match in matches)
+
+
+_has_embedded_status = has_embedded_status
+
+
+def classify_matches_with_embedded_status(matches: list[dict[str, Any]]) -> tuple[int, int, int]:
+    total_matches_corrected = 0
+    total_divergencias_corrected = 0
+
+    for match in matches:
+        if match["dados_interno"].get("motivo_preprocessamento"):
+            match["status_match"] = IntegrationMatchStatus.divergente
+            total_divergencias_corrected += 1
+            continue
+
+        status_value = match["dados_interno"].get("situacao_beneficio")
+        if not status_value:
+            match["status_match"] = IntegrationMatchStatus.nao_encontrado
+            match["dados_interno"]["motivo_preprocessamento"] = "situacao_beneficio_nao_informada_no_arquivo"
+            match["dados_interno"]["origem_comparacao"] = "status_embutido_no_arquivo"
+            match["dados_interno"]["classificacao_analise"] = "situacao_nao_informada"
+            match["dados_interno"]["acao_cobranca"] = "revisar_status_no_arquivo"
+            total_divergencias_corrected += 1
+            continue
+
+        classificacao_analise, motivo_regra, acao_cobranca = _classify_siprov_status(
+            {"situacao_base": status_value}
+        )
+        if classificacao_analise == "ativo_com_cobranca":
+            match["status_match"] = IntegrationMatchStatus.encontrado
+            match["dados_interno"]["motivo_preprocessamento"] = None
+            total_matches_corrected += 1
+        else:
+            match["status_match"] = IntegrationMatchStatus.divergente
+            match["dados_interno"]["motivo_preprocessamento"] = motivo_regra
+            total_divergencias_corrected += 1
+
+        match["dados_interno"]["origem_comparacao"] = "status_embutido_no_arquivo"
+        match["dados_interno"]["situacao_siprov"] = status_value
+        match["dados_interno"]["classificacao_analise"] = classificacao_analise
+        match["dados_interno"]["acao_cobranca"] = acao_cobranca
+
+    return total_matches_corrected, total_divergencias_corrected, total_matches_corrected
+
+
 
 def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
     """
@@ -421,50 +590,85 @@ def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
     first_row_normalized = {_normalize_key(k): k for k in rows[0].keys() if k != SOURCE_ROW_KEY}
     identifier_columns = _find_identifier_columns(set(first_row_normalized.keys()))
 
-    seen_identifiers: dict[tuple[str, str] | None, int] = {}
+    matches_by_identifier: dict[tuple[str, str], dict[str, Any]] = {}
     matches: list[dict[str, Any]] = []
     
     for idx, row in enumerate(rows):
         identity_fields = _extract_identity_fields(row, identifier_columns)
-        plate = identity_fields["placa_normalizada"]
-        identifier_key = None
-        if identity_fields["identificador_tipo"] and identity_fields["identificador_valor"]:
-            identifier_key = (identity_fields["identificador_tipo"], identity_fields["identificador_valor"])
-        
-        # Marca duplicatas com fallback de identificador: placa -> modelo -> cpf -> nome.
-        if identifier_key:
-            seen_identifiers[identifier_key] = seen_identifiers.get(identifier_key, 0) + 1
-        else:
-            seen_identifiers[None] = seen_identifiers.get(None, 0) + 1
-        
         row_data = _snapshot_row(row)
+        plate_candidates = identity_fields.get("placas_normalizadas") or []
 
-        # Status será determinado no cruzamento, inicialmente assume-se nao_encontrado
-        status = IntegrationMatchStatus.nao_encontrado
-        internal_data = {
-            "linha": row.get(SOURCE_ROW_KEY, idx + 2),
-            "motivo_preprocessamento": None,
-            "identificador_tipo": identity_fields["identificador_tipo"],
-            "identificador_valor": identity_fields["identificador_valor"],
-            "modelo_veiculo": identity_fields["modelo_veiculo"],
-            "cpf": identity_fields["cpf"],
-            "nome": identity_fields["nome"],
-        }
-        
-        # Validações de preprocessamento
-        if not identifier_key:
-            status = IntegrationMatchStatus.divergente
-            internal_data["motivo_preprocessamento"] = "nenhum_identificador_localizado"
-        
-        matches.append({
-            "placa_normalizada": plate,
-            "case_id": None,
-            "status_match": status,  # Preliminar; será revisado no crosscheck
-            "dados_fornecedor": row_data,
-            "dados_interno": internal_data,
-        })
+        expanded_identities: list[dict[str, Any]] = []
+        if plate_candidates:
+            for plate_candidate in plate_candidates:
+                expanded_identities.append(
+                    {
+                        **identity_fields,
+                        "placa_normalizada": plate_candidate,
+                        "placas_normalizadas": plate_candidates,
+                        "identificador_tipo": "placa",
+                        "identificador_valor": plate_candidate,
+                        "situacao_beneficio": identity_fields.get("situacao_beneficio"),
+                    }
+                )
+        else:
+            expanded_identities.append(identity_fields)
 
-    duplicate_identifiers = {key for key, count in seen_identifiers.items() if key is not None and count > 1}
+        for expanded_identity in expanded_identities:
+            plate = expanded_identity["placa_normalizada"]
+            identifier_key = None
+            if expanded_identity["identificador_tipo"] and expanded_identity["identificador_valor"]:
+                identifier_key = (expanded_identity["identificador_tipo"], expanded_identity["identificador_valor"])
+
+            if identifier_key and identifier_key in matches_by_identifier:
+                existing_match = matches_by_identifier[identifier_key]
+                recurrence_rows = existing_match["dados_interno"].setdefault("recorrencias", [])
+                recurrence_rows.append(
+                    {
+                        "linha": row.get(SOURCE_ROW_KEY, idx + 2),
+                        "dados_fornecedor": row_data,
+                    }
+                )
+                total_occurrences = 1 + len(recurrence_rows)
+                existing_match["dados_interno"]["possui_recorrencia"] = True
+                existing_match["dados_interno"]["quantidade_recorrencias"] = len(recurrence_rows)
+                existing_match["dados_interno"]["total_ocorrencias_arquivo"] = total_occurrences
+                existing_match["dados_interno"]["observacao_analise"] = _build_recurrence_note(total_occurrences)
+                continue
+
+            status = IntegrationMatchStatus.nao_encontrado
+            internal_data = {
+                "linha": row.get(SOURCE_ROW_KEY, idx + 2),
+                "motivo_preprocessamento": None,
+                "identificador_tipo": expanded_identity["identificador_tipo"],
+                "identificador_valor": expanded_identity["identificador_valor"],
+                "modelo_veiculo": expanded_identity["modelo_veiculo"],
+                "cpf": expanded_identity["cpf"],
+                "nome": expanded_identity["nome"],
+                "situacao_beneficio": expanded_identity.get("situacao_beneficio"),
+                "placas_relacionadas_no_titulo": expanded_identity.get("placas_normalizadas") or ([] if not plate else [plate]),
+                "possui_recorrencia": False,
+                "quantidade_recorrencias": 0,
+                "total_ocorrencias_arquivo": 1,
+                "recorrencias": [],
+                "observacao_analise": None,
+            }
+
+            if not identifier_key:
+                status = IntegrationMatchStatus.divergente
+                internal_data["motivo_preprocessamento"] = "nenhum_identificador_localizado"
+
+            match = {
+                "placa_normalizada": plate,
+                "case_id": None,
+                "status_match": status,
+                "dados_fornecedor": row_data,
+                "dados_interno": internal_data,
+            }
+            matches.append(match)
+            if identifier_key:
+                matches_by_identifier[identifier_key] = match
+
     total_divergencias = 0
     
     for match in matches:
@@ -474,12 +678,7 @@ def process_reconciliation_file(filename: str, content: bytes) -> ProcessResult:
         if identifier_type and identifier_value:
             identifier_key = (identifier_type, identifier_value)
 
-        if identifier_key in duplicate_identifiers:
-            match["status_match"] = IntegrationMatchStatus.divergente
-            if not match["dados_interno"].get("motivo_preprocessamento"):
-                match["dados_interno"]["motivo_preprocessamento"] = _build_duplicate_reason(identifier_type, "no_arquivo")
-            total_divergencias += 1
-        elif match["dados_interno"].get("motivo_preprocessamento"):
+        if match["dados_interno"].get("motivo_preprocessamento"):
             total_divergencias += 1
             match["status_match"] = IntegrationMatchStatus.divergente
     
@@ -515,13 +714,21 @@ def compare_matches_with_active_report(
         resolution, identifier_type, payload = _resolve_match_against_reference(match, indexes)
 
         if resolution == "encontrado" and payload is not None:
-            match["status_match"] = IntegrationMatchStatus.encontrado
-            match["dados_interno"]["motivo_preprocessamento"] = None
+            classificacao_analise, motivo_regra, acao_cobranca = _classify_siprov_status(payload)
+            if classificacao_analise == "ativo_com_cobranca":
+                match["status_match"] = IntegrationMatchStatus.encontrado
+                total_matches_corrected += 1
+            else:
+                match["status_match"] = IntegrationMatchStatus.divergente
+                total_divergencias_corrected += 1
+            match["dados_interno"]["motivo_preprocessamento"] = None if classificacao_analise == "ativo_com_cobranca" else motivo_regra
             match["dados_interno"]["origem_comparacao"] = "relatorio_veiculos_ativos"
             match["dados_interno"]["identificador_localizado"] = identifier_type
             match["dados_interno"]["linha_base"] = payload.get("linha")
             match["dados_interno"]["dados_base"] = payload.get("dados_base")
-            total_matches_corrected += 1
+            match["dados_interno"]["situacao_siprov"] = payload.get("situacao_base")
+            match["dados_interno"]["classificacao_analise"] = classificacao_analise
+            match["dados_interno"]["acao_cobranca"] = acao_cobranca
             continue
 
         if resolution == "ambiguo":
@@ -529,12 +736,17 @@ def compare_matches_with_active_report(
             match["dados_interno"]["motivo_preprocessamento"] = _build_duplicate_reason(identifier_type, "no_relatorio_base")
             match["dados_interno"]["origem_comparacao"] = "relatorio_veiculos_ativos"
             match["dados_interno"]["quantidade_correspondencias_base"] = payload.get("total") if payload else None
+            match["dados_interno"]["classificacao_analise"] = "ativo_duplicado_na_base"
+            match["dados_interno"]["acao_cobranca"] = "revisar_base_siprov_duplicada"
             total_divergencias_corrected += 1
             continue
 
         match["status_match"] = IntegrationMatchStatus.nao_encontrado
         match["dados_interno"]["motivo_preprocessamento"] = "nao_localizado_no_relatorio_base"
         match["dados_interno"]["origem_comparacao"] = "relatorio_veiculos_ativos"
+        match["dados_interno"]["classificacao_analise"] = "nao_ativo_com_cobranca"
+        match["dados_interno"]["acao_cobranca"] = "cessar_cobranca_fornecedor"
+        match["dados_interno"]["situacao_siprov"] = None
         total_divergencias_corrected += 1
 
     return total_matches_corrected, total_divergencias_corrected, total_matches_corrected, total_base_registros

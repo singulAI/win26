@@ -18,7 +18,12 @@ from app.models.integration import (
     IntegrationReport,
 )
 from app.models.user import User, UserRole
-from app.services.reconciliation import compare_matches_with_active_report, process_reconciliation_file
+from app.services.reconciliation import (
+    classify_matches_with_embedded_status,
+    compare_matches_with_active_report,
+    has_embedded_status,
+    process_reconciliation_file,
+)
 
 router = APIRouter(prefix="/admin/conciliacoes", tags=["Admin - Conciliacoes"])
 integrations_router = APIRouter(
@@ -36,6 +41,22 @@ class UploadResponse(BaseModel):
     total_divergencias: int
     comparado_com_relatorio_base: bool
     total_registros_base: int | None = None
+    total_recorrencias: int = 0
+
+
+def _count_recurrences(matches: list[dict]) -> int:
+    return sum((match.get("dados_interno") or {}).get("quantidade_recorrencias", 0) or 0 for match in matches)
+
+
+def _extract_analysis_breakdown(rows: list[IntegrationMatch]) -> dict[str, int]:
+    breakdown: dict[str, int] = {}
+    for row in rows:
+        dados_interno = row.dados_interno if isinstance(row.dados_interno, dict) else {}
+        classification = dados_interno.get("classificacao_analise")
+        if not classification:
+            continue
+        breakdown[classification] = breakdown.get(classification, 0) + 1
+    return breakdown
 
 
 @router.post("/upload", response_model=UploadResponse)
@@ -82,6 +103,7 @@ async def upload_conciliacao(
 
     comparado_com_relatorio_base = False
     total_registros_base: int | None = None
+    total_recorrencias = _count_recurrences(processing.matches)
 
     # Passo 2: Cruzamento com relatório-base de veículos ativos enviado no momento da análise.
     try:
@@ -93,6 +115,8 @@ async def upload_conciliacao(
                 total_registros_base,
             ) = compare_matches_with_active_report(processing.matches, base_filename, base_content)
             comparado_com_relatorio_base = True
+        elif has_embedded_status(processing.matches):
+            total_matches_corrected, total_divergencias_corrected, _ = classify_matches_with_embedded_status(processing.matches)
         else:
             total_matches_corrected = processing.total_matches
             total_divergencias_corrected = processing.total_divergencias
@@ -144,6 +168,7 @@ async def upload_conciliacao(
             "total_divergencias": total_divergencias_corrected,
             "comparado_com_relatorio_base": comparado_com_relatorio_base,
             "total_registros_base": total_registros_base,
+            "total_recorrencias": total_recorrencias,
             "arquivo_base_ativos": base_filename,
         },
     )
@@ -160,6 +185,7 @@ async def upload_conciliacao(
         total_divergencias=report.total_divergencias,
         comparado_com_relatorio_base=comparado_com_relatorio_base,
         total_registros_base=total_registros_base,
+        total_recorrencias=total_recorrencias,
     )
 
 
@@ -256,22 +282,12 @@ async def resumo_agregado_conciliacoes(
             "divergencias": row.total_divergencias or 0,
         }
     
-    # Contagem de placas duplicadas
-    try:
-        duplicadas_result = await db.execute(
-            select(func.count(IntegrationMatch.id)).where(
-                IntegrationMatch.dados_interno["motivo_preprocessamento"].as_string() == "placa_duplicada_no_arquivo"
-            )
-        )
-        duplicadas_count = duplicadas_result.scalar() or 0
-    except Exception:
-        fallback_result = await db.execute(select(IntegrationMatch.dados_interno))
-        duplicadas_count = sum(
-            1
-            for dados_interno in fallback_result.scalars()
-            if isinstance(dados_interno, dict)
-            and dados_interno.get("motivo_preprocessamento") == "placa_duplicada_no_arquivo"
-        )
+    fallback_result = await db.execute(select(IntegrationMatch.dados_interno))
+    duplicadas_count = sum(
+        (dados_interno.get("quantidade_recorrencias") or 0)
+        for dados_interno in fallback_result.scalars()
+        if isinstance(dados_interno, dict)
+    )
     
     return {
         "por_fornecedor": fornecedor_stats,
@@ -327,6 +343,14 @@ async def detalhe_conciliacao(
         .group_by(IntegrationMatch.status_match)
     )
     breakdown = {status.value: count for status, count in matches_result.all()}
+    detailed_rows_result = await db.execute(select(IntegrationMatch).where(IntegrationMatch.report_id == report_id))
+    detailed_rows = detailed_rows_result.scalars().all()
+    analysis_breakdown = _extract_analysis_breakdown(detailed_rows)
+    total_recorrencias = sum(
+        (row.dados_interno or {}).get("quantidade_recorrencias", 0) or 0
+        for row in detailed_rows
+        if isinstance(row.dados_interno, dict)
+    )
 
     return {
         "id": report.id,
@@ -338,6 +362,8 @@ async def detalhe_conciliacao(
             "divergencias": report.total_divergencias,
         },
         "breakdown_status": breakdown,
+        "breakdown_analise": analysis_breakdown,
+        "total_recorrencias": total_recorrencias,
         "conciliado": report.conciliado,
         "criado_em": report.criado_em.isoformat() if report.criado_em else None,
         "atualizado_em": report.atualizado_em.isoformat() if report.atualizado_em else None,
@@ -395,10 +421,26 @@ async def download_conciliacao_csv(
 
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(["id", "placa_normalizada", "status_match", "case_id", "motivo"])
+    writer.writerow(["id", "placa_normalizada", "status_match", "classificacao_analise", "situacao_siprov", "acao_cobranca", "case_id", "motivo", "total_ocorrencias_arquivo", "observacao_analise"])
     for m in rows:
         motivo = m.dados_interno.get("motivo_preprocessamento", "") if m.dados_interno else ""
-        writer.writerow([m.id, m.placa_normalizada or "", m.status_match.value, m.case_id or "", motivo])
+        classificacao = m.dados_interno.get("classificacao_analise", "") if m.dados_interno else ""
+        situacao_siprov = m.dados_interno.get("situacao_siprov", "") if m.dados_interno else ""
+        acao_cobranca = m.dados_interno.get("acao_cobranca", "") if m.dados_interno else ""
+        total_ocorrencias = m.dados_interno.get("total_ocorrencias_arquivo", 1) if m.dados_interno else 1
+        observacao = m.dados_interno.get("observacao_analise", "") if m.dados_interno else ""
+        writer.writerow([
+            m.id,
+            m.placa_normalizada or "",
+            m.status_match.value,
+            classificacao,
+            situacao_siprov,
+            acao_cobranca,
+            m.case_id or "",
+            motivo,
+            total_ocorrencias,
+            observacao,
+        ])
 
     output.seek(0)
     filename = f"conciliacao_{report_id}.csv"

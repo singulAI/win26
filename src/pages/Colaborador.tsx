@@ -276,11 +276,6 @@ const Colaborador = () => {
       return;
     }
 
-    if (!uploadBaseFile) {
-      setUploadError("Selecione o relatório base de veículos ativos para usar na comparação.");
-      return;
-    }
-
     setIsUploading(true);
     setUploadError(null);
     setUploadSuccess(null);
@@ -290,7 +285,9 @@ const Colaborador = () => {
       formData.append("fornecedor", uploadSupplier);
       formData.append("periodo_ref", `${uploadPeriod}-01`);
       formData.append("arquivo", uploadFile);
-      formData.append("arquivo_base_ativos", uploadBaseFile);
+      if (uploadBaseFile) {
+        formData.append("arquivo_base_ativos", uploadBaseFile);
+      }
 
       const response = await apiRequest<ReconciliationUploadResponse>("/admin/conciliacoes/upload", {
         method: "POST",
@@ -578,7 +575,7 @@ const Colaborador = () => {
 
               <div className="rounded-2xl border border-gold/20 bg-gold/5 p-4">
                 <p className="text-[10px] sm:text-xs font-medium tracking-[0.18em] uppercase text-gold mb-2">
-                  Base ativa obrigatória
+                  Relatório base opcional
                 </p>
                 <label className="block text-xs font-medium text-muted-foreground mb-2">Relatório base de veículos ativos (.xlsx ou .csv)</label>
                 <input
@@ -589,12 +586,12 @@ const Colaborador = () => {
                   className="block w-full rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-sm text-muted-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-xs file:font-medium file:text-primary-foreground disabled:opacity-60"
                 />
                 <p className="mt-2 text-[11px] text-muted-foreground">
-                  Sem esse arquivo, a comparação não reflete os associados ativos do momento.
+                  Opcional: se enviado, será usado para cruzar com a base ativa. Caso contrário, o arquivo do fornecedor será analisado pelo status embutido.
                 </p>
               </div>
 
               <p className="text-[11px] text-muted-foreground">
-                A análise usa a ordem placa, modelo do veículo, cpf e nome. O relatório-base de ativos passa a ser a referência real dos associados cadastrados no momento do upload.
+                A análise usa a ordem placa, modelo do veículo, cpf e nome. Se houver relatório base, ele será usado; caso contrário, o status embutido no arquivo do fornecedor é a referência.
               </p>
             </div>
 
